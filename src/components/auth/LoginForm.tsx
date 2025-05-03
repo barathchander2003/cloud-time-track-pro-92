@@ -43,26 +43,69 @@ const LoginForm = () => {
     setLoading(true);
     
     try {
+      console.log("Attempting login with:", data.email);
       const { data: sessionData, error } = await signIn(data.email, data.password);
       
       if (error) {
+        console.error("Login error:", error);
         toast({
           variant: "destructive",
           title: "Login failed",
-          description: error.message || "Invalid email or password.",
+          description: error.message || "Invalid email or password. Try using the demo buttons below.",
         });
-      } else {
+      } else if (sessionData) {
         toast({
           title: "Login successful",
           description: "Welcome to TimeTrack HR system.",
         });
         navigate("/dashboard");
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Login failed",
+          description: "No session returned. Try using the demo buttons below.",
+        });
       }
     } catch (error: any) {
       console.error("Login error:", error);
       toast({
         variant: "destructive",
         title: "Login failed",
+        description: "An unexpected error occurred. Try using the demo buttons below.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDemoLogin = async (email: string) => {
+    setLoading(true);
+    form.setValue("email", email);
+    form.setValue("password", "password123");
+    
+    try {
+      console.log("Attempting demo login with:", email);
+      const { data: sessionData, error } = await signIn(email, "password123");
+      
+      if (error) {
+        console.error("Demo login error:", error);
+        toast({
+          variant: "destructive",
+          title: "Demo login failed",
+          description: "The demo account credentials are invalid. Please contact the administrator.",
+        });
+      } else if (sessionData) {
+        toast({
+          title: "Demo login successful",
+          description: `Welcome to TimeTrack HR system. You are logged in as ${email.includes("admin") ? "Admin" : "HR"}.`,
+        });
+        navigate("/dashboard");
+      }
+    } catch (error: any) {
+      console.error("Demo login error:", error);
+      toast({
+        variant: "destructive",
+        title: "Demo login failed",
         description: "An unexpected error occurred. Please try again.",
       });
     } finally {
@@ -70,20 +113,8 @@ const LoginForm = () => {
     }
   };
 
-  const handleDemoLogin = (email: string) => {
-    form.setValue("email", email);
-    form.setValue("password", "password");
-  };
-
   return (
     <div className="max-w-md w-full mx-auto p-6 bg-card rounded-lg shadow-lg">
-      <div className="flex justify-center mb-6">
-        <div className="flex items-center space-x-2">
-          <Clock className="h-8 w-8 text-brand-600" />
-          <span className="text-2xl font-bold text-brand-600">TimeTrack</span>
-        </div>
-      </div>
-      <h1 className="text-2xl font-semibold text-center mb-6">Sign In</h1>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <FormField
@@ -126,12 +157,13 @@ const LoginForm = () => {
         </form>
       </Form>
       <div className="mt-6 text-center text-sm text-muted-foreground space-y-2">
-        <p>Demo credentials:</p>
+        <p>Demo credentials (password123):</p>
         <div className="flex gap-2 justify-center">
           <Button 
             variant="outline" 
             size="sm" 
             onClick={() => handleDemoLogin("admin@example.com")}
+            disabled={loading}
           >
             Admin
           </Button>
@@ -139,6 +171,7 @@ const LoginForm = () => {
             variant="outline" 
             size="sm" 
             onClick={() => handleDemoLogin("hr@example.com")}
+            disabled={loading}
           >
             HR
           </Button>

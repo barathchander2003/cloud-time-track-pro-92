@@ -41,11 +41,13 @@ const ForgotPassword = () => {
     setLoading(true);
     
     try {
+      console.log("Requesting password reset for:", data.email);
       const { error } = await supabase.auth.resetPasswordForEmail(data.email, {
         redirectTo: window.location.origin + '/reset-password',
       });
       
       if (error) {
+        console.error("Password reset error:", error);
         toast({
           variant: "destructive",
           title: "Password reset failed",
@@ -123,9 +125,11 @@ const ForgotPassword = () => {
                       </FormItem>
                     )}
                   />
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? "Sending..." : "Send Reset Link"}
-                  </Button>
+                  <div className="pt-2">
+                    <Button type="submit" className="w-full" disabled={loading}>
+                      {loading ? "Sending..." : "Send Reset Link"}
+                    </Button>
+                  </div>
                 </form>
               </Form>
             )}
@@ -138,6 +142,10 @@ const ForgotPassword = () => {
             </Link>
           </CardFooter>
         </Card>
+
+        <div className="mt-4 text-center text-sm text-muted-foreground">
+          <p>For demo accounts, use password123</p>
+        </div>
       </div>
     </div>
   );

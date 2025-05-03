@@ -31,9 +31,13 @@ const Login = () => {
           <LoginForm />
           <div className="flex items-center justify-center w-full gap-2 text-sm text-muted-foreground p-4 border-t">
             <ShieldCheck className="h-4 w-4" />
-            <span>Only HR and administrators can login</span>
+            <span>Use the demo buttons above to log in</span>
           </div>
         </Card>
+
+        <p className="mt-4 text-center text-sm text-muted-foreground">
+          Note: Demo accounts use the password "password123"
+        </p>
       </div>
     </div>
   );

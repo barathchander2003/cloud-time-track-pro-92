@@ -2,7 +2,7 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Session, User, AuthError } from "@supabase/supabase-js";
+import { Session, User, AuthError, AuthTokenResponse } from "@supabase/supabase-js";
 import { useNavigate } from "react-router-dom";
 
 interface UserProfile {
@@ -163,15 +163,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     try {
+      console.log("Signing in with email:", email);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
+
+      console.log("Sign in response:", data ? "Data received" : "No data", error ? `Error: ${error.message}` : "No error");
       
-      return { data: data.session, error };
+      return { 
+        data: data.session,
+        error 
+      };
     } catch (error) {
-      console.error("Error signing in:", error);
-      return { data: null, error: error as AuthError };
+      console.error("Error in signIn function:", error);
+      return { 
+        data: null, 
+        error: error instanceof Error ? new AuthError(error.message) : new AuthError("Unknown error occurred")
+      };
     }
   };
 
