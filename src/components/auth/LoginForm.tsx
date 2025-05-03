@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Clock } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
@@ -28,6 +29,7 @@ const LoginForm = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { signIn } = useAuth();
 
   const form = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
@@ -40,25 +42,37 @@ const LoginForm = () => {
   const onSubmit = async (data: LoginValues) => {
     setLoading(true);
     
-    // Mock login delay for demo - in a real app, this would be an API call
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const { data: sessionData, error } = await signIn(data.email, data.password);
       
-      // Simulate authentication success
-      if (data.email.includes("admin")) {
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Login failed",
+          description: error.message || "Invalid email or password.",
+        });
+      } else {
         toast({
           title: "Login successful",
           description: "Welcome to TimeTrack HR system.",
         });
-        navigate("/");
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Login failed",
-          description: "Invalid email or password.",
-        });
+        navigate("/dashboard");
       }
-    }, 1000);
+    } catch (error: any) {
+      console.error("Login error:", error);
+      toast({
+        variant: "destructive",
+        title: "Login failed",
+        description: "An unexpected error occurred. Please try again.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDemoLogin = (email: string) => {
+    form.setValue("email", email);
+    form.setValue("password", "password");
   };
 
   return (
@@ -99,7 +113,10 @@ const LoginForm = () => {
             )}
           />
           <div className="flex items-center justify-between">
-            <a href="#" className="text-sm text-brand-600 hover:underline">
+            <a 
+              href="/forgot-password" 
+              className="text-sm text-brand-600 hover:underline"
+            >
               Forgot password?
             </a>
           </div>
@@ -108,8 +125,24 @@ const LoginForm = () => {
           </Button>
         </form>
       </Form>
-      <div className="mt-6 text-center text-sm text-muted-foreground">
-        <p>Demo credentials: admin@example.com / password</p>
+      <div className="mt-6 text-center text-sm text-muted-foreground space-y-2">
+        <p>Demo credentials:</p>
+        <div className="flex gap-2 justify-center">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => handleDemoLogin("admin@example.com")}
+          >
+            Admin
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => handleDemoLogin("hr@example.com")}
+          >
+            HR
+          </Button>
+        </div>
       </div>
     </div>
   );
