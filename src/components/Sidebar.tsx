@@ -1,6 +1,5 @@
 
-import { useState } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { 
   Sidebar as SidebarComponent, 
   SidebarContent,
@@ -15,26 +14,32 @@ import {
 } from "@/components/ui/sidebar";
 import { 
   Calendar, 
-  User, 
-  Users, 
-  FileText, 
   Clock, 
   Settings, 
   Database, 
   ChartBar, 
-  LogOut
+  LogOut,
+  FileText,
+  Users,
+  CheckSquare,
+  FileSpreadsheet
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/context/AuthContext";
+import { Button } from "@/components/ui/button";
 
 const Sidebar = () => {
-  const [role] = useState<"admin" | "hr" | "manager">("admin");
+  const { profile, signOut } = useAuth();
+  const navigate = useNavigate();
+  
+  const role = profile?.role || "user";
 
   const menuItems = [
     {
       title: "Dashboard",
       icon: ChartBar,
-      href: "/",
-      roles: ["admin", "hr", "manager"]
+      href: "/dashboard",
+      roles: ["admin", "hr", "manager", "user"]
     },
     {
       title: "Employees",
@@ -46,11 +51,11 @@ const Sidebar = () => {
       title: "Timesheets",
       icon: Calendar,
       href: "/timesheets",
-      roles: ["admin", "hr", "manager"]
+      roles: ["admin", "hr", "manager", "user"]
     },
     {
       title: "Approvals",
-      icon: Clock,
+      icon: CheckSquare,
       href: "/approvals",
       roles: ["admin", "hr", "manager"]
     },
@@ -62,7 +67,7 @@ const Sidebar = () => {
     },
     {
       title: "Reports",
-      icon: Database,
+      icon: FileSpreadsheet,
       href: "/reports",
       roles: ["admin", "hr", "manager"]
     },
@@ -78,17 +83,21 @@ const Sidebar = () => {
     item.roles.includes(role)
   );
 
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
   return (
-    <SidebarComponent>
-      <SidebarHeader className="py-6 px-4 flex items-center justify-center border-b">
+    <SidebarComponent className="border-r bg-white">
+      <SidebarHeader className="py-6 px-4 flex items-center justify-center border-b bg-brand-600 text-white">
         <div className="flex items-center space-x-2">
-          <Clock className="h-6 w-6 text-brand-600" />
-          <span className="text-xl font-bold text-brand-600">TimeTrack</span>
+          <Clock className="h-6 w-6" />
+          <span className="text-xl font-bold">TimeTrack</span>
         </div>
       </SidebarHeader>
-      <SidebarContent>
+      <SidebarContent className="bg-white">
         <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-muted-foreground">Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {filteredMenuItems.map((item) => (
@@ -98,8 +107,10 @@ const Sidebar = () => {
                       to={item.href} 
                       className={({ isActive }) => 
                         cn(
-                          "flex items-center gap-3 rounded-md",
-                          isActive && "bg-sidebar-accent text-sidebar-accent-foreground"
+                          "flex items-center gap-3 rounded-md px-3 py-2 transition-colors",
+                          isActive 
+                            ? "bg-brand-50 text-brand-700" 
+                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
                         )
                       }
                     >
@@ -113,20 +124,31 @@ const Sidebar = () => {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="mt-auto p-4 border-t">
+      <SidebarFooter className="mt-auto p-4 border-t bg-slate-50">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="h-9 w-9 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center">
-              <User className="h-5 w-5" />
+              {profile?.first_name && profile?.last_name 
+                ? `${profile.first_name[0]}${profile.last_name[0]}`
+                : role.substring(0, 2).toUpperCase()}
             </div>
             <div>
-              <p className="text-sm font-medium">Admin User</p>
-              <p className="text-xs text-muted-foreground">System Admin</p>
+              <p className="text-sm font-medium">
+                {profile?.first_name && profile?.last_name 
+                  ? `${profile.first_name} ${profile.last_name}`
+                  : role.charAt(0).toUpperCase() + role.slice(1)}
+              </p>
+              <p className="text-xs text-muted-foreground capitalize">{role}</p>
             </div>
           </div>
-          <button className="text-muted-foreground hover:text-foreground">
+          <Button
+            variant="ghost" 
+            size="icon" 
+            onClick={handleSignOut} 
+            className="text-muted-foreground hover:text-foreground"
+          >
             <LogOut className="h-5 w-5" />
-          </button>
+          </Button>
         </div>
       </SidebarFooter>
     </SidebarComponent>
