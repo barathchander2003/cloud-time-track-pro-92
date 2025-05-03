@@ -2,7 +2,7 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Session, User, AuthError, AuthTokenResponse } from "@supabase/supabase-js";
+import { Session, User, AuthError } from "@supabase/supabase-js";
 import { useNavigate } from "react-router-dom";
 
 interface UserProfile {
@@ -115,6 +115,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
+        console.log("Auth state changed:", event, currentSession ? "session exists" : "no session");
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
@@ -134,16 +135,31 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Get initial session
     const initializeAuth = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (data.session) {
-        setSession(data.session);
-        setUser(data.session.user);
+      try {
+        console.log("Checking for existing session...");
+        const { data, error } = await supabase.auth.getSession();
         
-        // Fetch user profile
-        const userProfile = await fetchProfile(data.session.user.id);
-        setProfile(userProfile);
+        if (error) {
+          console.error("Error getting session:", error);
+        }
+        
+        if (data.session) {
+          console.log("Existing session found");
+          setSession(data.session);
+          setUser(data.session.user);
+          
+          // Fetch user profile
+          const userProfile = await fetchProfile(data.session.user.id);
+          setProfile(userProfile);
+        } else {
+          console.log("No existing session");
+        }
+        
+        setIsLoading(false);
+      } catch (error) {
+        console.error("Error initializing auth:", error);
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
 
     initializeAuth();
@@ -164,22 +180,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signIn = async (email: string, password: string) => {
     try {
       console.log("Signing in with email:", email);
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      console.log("Sign in response:", data ? "Data received" : "No data", error ? `Error: ${error.message}` : "No error");
+      console.log("Sign in response:", 
+        data?.session ? "Session received" : "No session", 
+        error ? `Error: ${error.message}` : "No error"
+      );
       
       return { 
-        data: data.session,
+        data: data?.session,
         error 
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error in signIn function:", error);
       return { 
         data: null, 
-        error: error instanceof Error ? new AuthError(error.message) : new AuthError("Unknown error occurred")
+        error: new AuthError(error.message || "An unknown error occurred")
       };
     }
   };

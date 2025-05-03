@@ -78,35 +78,44 @@ const LoginForm = () => {
     }
   };
 
-  const handleDemoLogin = async (email: string) => {
+  const handleDemoLogin = async (role: string) => {
     setLoading(true);
+    const email = role === "admin" ? "admin@example.com" : "hr@example.com";
+    const password = "password123";
+    
     form.setValue("email", email);
-    form.setValue("password", "password123");
+    form.setValue("password", password);
     
     try {
-      console.log("Attempting demo login with:", email);
-      const { data: sessionData, error } = await signIn(email, "password123");
+      console.log(`Attempting demo login as ${role} with:`, email, password);
+      const { data: sessionData, error } = await signIn(email, password);
       
       if (error) {
         console.error("Demo login error:", error);
         toast({
           variant: "destructive",
           title: "Demo login failed",
-          description: "The demo account credentials are invalid. Please contact the administrator.",
+          description: `Error: ${error.message}. Please try again.`,
         });
       } else if (sessionData) {
         toast({
           title: "Demo login successful",
-          description: `Welcome to TimeTrack HR system. You are logged in as ${email.includes("admin") ? "Admin" : "HR"}.`,
+          description: `Welcome to TimeTrack HR system. You are logged in as ${role}.`,
         });
         navigate("/dashboard");
+      } else {
+        toast({
+          variant: "destructive", 
+          title: "Demo login failed",
+          description: "No session returned. Please check console for details.",
+        });
       }
     } catch (error: any) {
       console.error("Demo login error:", error);
       toast({
         variant: "destructive",
         title: "Demo login failed",
-        description: "An unexpected error occurred. Please try again.",
+        description: `An unexpected error occurred: ${error.message}`,
       });
     } finally {
       setLoading(false);
@@ -162,7 +171,7 @@ const LoginForm = () => {
           <Button 
             variant="outline" 
             size="sm" 
-            onClick={() => handleDemoLogin("admin@example.com")}
+            onClick={() => handleDemoLogin("admin")}
             disabled={loading}
           >
             Admin
@@ -170,7 +179,7 @@ const LoginForm = () => {
           <Button 
             variant="outline" 
             size="sm" 
-            onClick={() => handleDemoLogin("hr@example.com")}
+            onClick={() => handleDemoLogin("hr")}
             disabled={loading}
           >
             HR

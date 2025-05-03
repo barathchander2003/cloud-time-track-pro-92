@@ -6,7 +6,19 @@ import { useAuth } from "@/context/AuthContext";
 import LoginForm from "@/components/auth/LoginForm";
 
 const Login = () => {
-  const { session } = useAuth();
+  const { session, isLoading } = useAuth();
+
+  // Show loading state while checking authentication
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50">
+        <div className="animate-pulse flex flex-col items-center">
+          <Clock className="h-8 w-8 text-brand-600" />
+          <p className="mt-4 text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   // If already logged in, redirect to dashboard
   if (session) {
