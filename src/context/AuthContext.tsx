@@ -2,7 +2,7 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Session, User } from "@supabase/supabase-js";
+import { Session, User, AuthError } from "@supabase/supabase-js";
 import { useNavigate } from "react-router-dom";
 
 interface UserProfile {
@@ -20,8 +20,8 @@ interface AuthContextType {
   isAdmin: boolean;
   isHR: boolean;
   signIn: (email: string, password: string) => Promise<{
-    error: Error | null;
     data: Session | null;
+    error: AuthError | null;
   }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -168,11 +168,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         password,
       });
       
-      if (error) throw error;
-      return { data, error: null };
+      return { data: data.session, error };
     } catch (error) {
       console.error("Error signing in:", error);
-      return { data: null, error: error as Error };
+      return { data: null, error: error as AuthError };
     }
   };
 

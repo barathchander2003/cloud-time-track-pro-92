@@ -49,7 +49,7 @@ const Login = () => {
     setLoading(true);
     
     try {
-      const { error } = await signIn(data.email, data.password);
+      const { data: sessionData, error } = await signIn(data.email, data.password);
       
       if (error) {
         toast({
