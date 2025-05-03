@@ -1,7 +1,7 @@
 
 import { Navigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
-import { Clock, ShieldCheck } from "lucide-react";
+import { Clock } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import LoginForm from "@/components/auth/LoginForm";
 
@@ -41,14 +41,10 @@ const Login = () => {
         
         <Card className="border-none shadow-lg">
           <LoginForm />
-          <div className="flex items-center justify-center w-full gap-2 text-sm text-muted-foreground p-4 border-t">
-            <ShieldCheck className="h-4 w-4" />
-            <span>Use the demo buttons above to log in</span>
-          </div>
         </Card>
 
         <p className="mt-4 text-center text-sm text-muted-foreground">
-          Note: Demo accounts use the password "password123"
+          For demo purposes, use: admin@example.com / password123
         </p>
       </div>
     </div>

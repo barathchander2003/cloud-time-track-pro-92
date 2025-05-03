@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Clock } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 const loginSchema = z.object({
@@ -34,8 +33,8 @@ const LoginForm = () => {
   const form = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: "",
-      password: "",
+      email: "admin@example.com",
+      password: "password123",
     },
   });
 
@@ -51,7 +50,7 @@ const LoginForm = () => {
         toast({
           variant: "destructive",
           title: "Login failed",
-          description: error.message || "Invalid email or password. Try using the demo buttons below.",
+          description: error.message || "Invalid email or password.",
         });
       } else if (sessionData) {
         toast({
@@ -59,71 +58,27 @@ const LoginForm = () => {
           description: "Welcome to TimeTrack HR system.",
         });
         navigate("/dashboard");
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Login failed",
-          description: "No session returned. Try using the demo buttons below.",
-        });
       }
     } catch (error: any) {
       console.error("Login error:", error);
       toast({
         variant: "destructive",
         title: "Login failed",
-        description: "An unexpected error occurred. Try using the demo buttons below.",
+        description: "An unexpected error occurred.",
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDemoLogin = async (role: string) => {
-    setLoading(true);
-    const email = role === "admin" ? "admin@example.com" : "hr@example.com";
-    const password = "password123";
-    
-    form.setValue("email", email);
-    form.setValue("password", password);
-    
-    try {
-      console.log(`Attempting demo login as ${role} with:`, email, password);
-      const { data: sessionData, error } = await signIn(email, password);
-      
-      if (error) {
-        console.error("Demo login error:", error);
-        toast({
-          variant: "destructive",
-          title: "Demo login failed",
-          description: `Error: ${error.message}. Please try again.`,
-        });
-      } else if (sessionData) {
-        toast({
-          title: "Demo login successful",
-          description: `Welcome to TimeTrack HR system. You are logged in as ${role}.`,
-        });
-        navigate("/dashboard");
-      } else {
-        toast({
-          variant: "destructive", 
-          title: "Demo login failed",
-          description: "No session returned. Please check console for details.",
-        });
-      }
-    } catch (error: any) {
-      console.error("Demo login error:", error);
-      toast({
-        variant: "destructive",
-        title: "Demo login failed",
-        description: `An unexpected error occurred: ${error.message}`,
-      });
-    } finally {
-      setLoading(false);
-    }
+  const handleQuickLogin = () => {
+    form.setValue("email", "admin@example.com");
+    form.setValue("password", "password123");
+    form.handleSubmit(onSubmit)();
   };
 
   return (
-    <div className="max-w-md w-full mx-auto p-6 bg-card rounded-lg shadow-lg">
+    <div className="p-6">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <FormField
@@ -163,29 +118,18 @@ const LoginForm = () => {
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Signing in..." : "Sign In"}
           </Button>
+          
+          <Button 
+            type="button" 
+            variant="outline" 
+            className="w-full" 
+            onClick={handleQuickLogin}
+            disabled={loading}
+          >
+            Quick Demo Login
+          </Button>
         </form>
       </Form>
-      <div className="mt-6 text-center text-sm text-muted-foreground space-y-2">
-        <p>Demo credentials (password123):</p>
-        <div className="flex gap-2 justify-center">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => handleDemoLogin("admin")}
-            disabled={loading}
-          >
-            Admin
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => handleDemoLogin("hr")}
-            disabled={loading}
-          >
-            HR
-          </Button>
-        </div>
-      </div>
     </div>
   );
 };
