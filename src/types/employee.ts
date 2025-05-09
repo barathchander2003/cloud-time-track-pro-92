@@ -1,26 +1,23 @@
 
 export interface Employee {
   id: string;
-  firstName: string;
-  lastName: string;
+  first_name: string;
+  last_name: string;
   email: string;
-  jobTitle: string;
-  organization: string;
-  employmentType: "full-time" | "contractor";
-  status: "active" | "inactive";
-  initials: string;
+  role: string;
+  start_date: string;
+  employment_type: string;
+  work_location?: string;
+  mobile_number?: string;
+  end_date?: string | null;
+  employee_number?: string | null;
 }
 
-export const filterEmployees = (employees: Employee[], searchTerm: string): Employee[] => {
-  return employees.filter(employee => {
-    const fullName = `${employee.firstName} ${employee.lastName}`.toLowerCase();
-    const search = searchTerm.toLowerCase();
-    return (
-      fullName.includes(search) ||
-      employee.email.toLowerCase().includes(search) ||
-      employee.jobTitle.toLowerCase().includes(search) ||
-      employee.organization.toLowerCase().includes(search) ||
-      employee.id.toLowerCase().includes(search)
-    );
-  });
-};
+export interface EmployeeHeaderProps {
+  newEmployeeOpen: boolean;
+  setNewEmployeeOpen: (open: boolean) => void;
+}
+
+export interface EmployeeSearchProps {
+  onSearch: (query: string) => void;
+}

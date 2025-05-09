@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -9,7 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isValid } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -40,8 +41,15 @@ const TimesheetCalendar = () => {
   const { toast } = useToast();
   const { session } = useAuth();
   
-  // Format date key for timeEntries object
-  const formatDateKey = (date: Date) => format(date, "yyyy-MM-dd");
+  // Format date key for timeEntries object - with safety check
+  const formatDateKey = (date: Date) => {
+    // Ensure the date is valid before formatting
+    if (!date || !isValid(date)) {
+      console.error("Invalid date provided to formatDateKey", date);
+      return format(new Date(), "yyyy-MM-dd"); // Fallback to current date
+    }
+    return format(date, "yyyy-MM-dd");
+  };
   
   // Get all days in the current month for the summary view
   const daysInMonth = selectedDate
@@ -109,7 +117,14 @@ const TimesheetCalendar = () => {
       
       // Convert DB entries to our local format
       const entries = entriesData.reduce((acc, entry) => {
-        const dateKey = format(new Date(entry.date), "yyyy-MM-dd");
+        // Validate the date before formatting
+        const entryDate = new Date(entry.date);
+        if (!isValid(entryDate)) {
+          console.error("Invalid date in entry:", entry);
+          return acc;
+        }
+        
+        const dateKey = format(entryDate, "yyyy-MM-dd");
         acc[dateKey] = {
           hours: entry.hours || 0,
           leaveType: entry.leave_type || "work",
@@ -128,6 +143,11 @@ const TimesheetCalendar = () => {
       });
     }
   };
+  
+  // Effect to load entries when month changes
+  useEffect(() => {
+    loadTimeEntries();
+  }, [month, session]);
   
   // Save the current entry to Supabase
   const saveEntry = async () => {
@@ -302,6 +322,12 @@ const TimesheetCalendar = () => {
   
   // Function to determine day status for styling calendar days
   const getDayStatus = (date: Date) => {
+    // Ensure date is valid before proceeding
+    if (!date || !isValid(date)) {
+      console.error("Invalid date provided to getDayStatus", date);
+      return "";
+    }
+    
     const dateKey = formatDateKey(date);
     const entry = timeEntries[dateKey];
     
@@ -359,8 +385,7 @@ const TimesheetCalendar = () => {
                       const status = getDayStatus(props.date);
                       return (
                         <div
-                          onClick={props.onClick}
-                          onMouseEnter={props.onMouseEnter}
+                          onClick={() => props.selectDay && props.selectDay(props.date)}
                           className={`${status} h-9 w-9 p-0 font-normal aria-selected:opacity-100`}
                         >
                           {props.date.getDate()}
