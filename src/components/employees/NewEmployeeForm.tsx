@@ -1,4 +1,3 @@
-
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -104,7 +103,7 @@ const employeeSchema = z.object({
 
 type EmployeeValues = z.infer<typeof employeeSchema>;
 
-const NewEmployeeForm = ({ onClose }) => {
+const NewEmployeeForm = ({ onClose, onSuccess }) => {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState("personal");
@@ -133,6 +132,24 @@ const NewEmployeeForm = ({ onClose }) => {
   async function onSubmit(data: EmployeeValues) {
     try {
       setIsSubmitting(true);
+      
+      // For demo mode
+      if (!session || session?.user?.email === 'admin@example.com') {
+        // Simulate API call
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        
+        toast({
+          title: "Employee created",
+          description: `${data.firstName} ${data.surname} has been added successfully.`,
+        });
+        
+        // Call onSuccess callback if provided
+        if (onSuccess) {
+          onSuccess();
+        }
+        
+        return;
+      }
       
       // Insert employee record
       const { data: employeeData, error: employeeError } = await supabase
@@ -219,6 +236,11 @@ const NewEmployeeForm = ({ onClose }) => {
         title: "Employee created",
         description: `${data.firstName} ${data.surname} has been added successfully.`,
       });
+      
+      // Call onSuccess callback if provided
+      if (onSuccess) {
+        onSuccess();
+      }
       
       // Refresh page to show new employee
       window.location.reload();

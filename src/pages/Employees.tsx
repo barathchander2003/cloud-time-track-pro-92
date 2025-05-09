@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import EmployeeTable from "@/components/employees/EmployeeTable";
 import EmployeeSearch from "@/components/employees/EmployeeSearch";
-import NewEmployeeForm from "@/components/employees/NewEmployeeForm";
+import EmployeeHeader from "@/components/employees/EmployeeHeader";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { Employee } from "@/types/employee";
@@ -22,6 +22,16 @@ const Employees = () => {
   const fetchEmployees = async () => {
     try {
       setLoading(true);
+      
+      // For demo mode
+      if (!session || session.user.email === 'admin@example.com') {
+        // Use mock data for demo
+        const { employees: demoEmployees } = await import("@/data/employeesData");
+        console.log("Using demo employee data:", demoEmployees);
+        setEmployees(demoEmployees);
+        setLoading(false);
+        return;
+      }
       
       // Get all employees
       const { data, error } = await supabase
@@ -64,9 +74,7 @@ const Employees = () => {
   
   // Initial fetch
   useEffect(() => {
-    if (session) {
-      fetchEmployees();
-    }
+    fetchEmployees();
   }, [session]);
   
   // Filtered employees based on search
@@ -96,11 +104,6 @@ const Employees = () => {
     });
   };
   
-  // Handle form cancel
-  const handleCancel = () => {
-    setNewEmployeeOpen(false);
-  };
-  
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg shadow-sm">
@@ -124,12 +127,10 @@ const Employees = () => {
       
       <EmployeeTable employees={filteredEmployees} loading={loading} />
       
-      {newEmployeeOpen && (
-        <NewEmployeeForm
-          onClose={handleCancel}
-          onSuccess={handleEmployeeCreated}
-        />
-      )}
+      <EmployeeHeader 
+        newEmployeeOpen={newEmployeeOpen}
+        setNewEmployeeOpen={setNewEmployeeOpen}
+      />
     </div>
   );
 };

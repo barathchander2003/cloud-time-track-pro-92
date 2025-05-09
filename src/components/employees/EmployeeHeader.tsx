@@ -26,7 +26,10 @@ const EmployeeHeader = ({ newEmployeeOpen, setNewEmployeeOpen }: EmployeeHeaderP
             Fill in the details below to add a new employee to your organization.
           </DialogDescription>
         </DialogHeader>
-        <NewEmployeeForm onClose={() => setNewEmployeeOpen(false)} onSuccess={() => handleEmployeeCreated()} />
+        <NewEmployeeForm 
+          onClose={() => setNewEmployeeOpen(false)} 
+          onSuccess={handleEmployeeCreated}
+        />
       </DialogContent>
     </Dialog>
   );
