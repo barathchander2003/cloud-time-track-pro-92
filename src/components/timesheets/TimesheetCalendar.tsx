@@ -355,14 +355,15 @@ const TimesheetCalendar = () => {
                     }
                   }}
                   components={{
-                    Day: ({ day, ...props }) => {
-                      const status = getDayStatus(day);
+                    Day: (props) => {
+                      const status = getDayStatus(props.date);
                       return (
                         <div
-                          {...props}
-                          className={`${props.className} ${status} h-9 w-9 p-0 font-normal aria-selected:opacity-100`}
+                          onClick={props.onClick}
+                          onMouseEnter={props.onMouseEnter}
+                          className={`${status} h-9 w-9 p-0 font-normal aria-selected:opacity-100`}
                         >
-                          {day.getDate()}
+                          {props.date.getDate()}
                         </div>
                       );
                     }

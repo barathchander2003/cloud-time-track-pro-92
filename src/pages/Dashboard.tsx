@@ -18,7 +18,7 @@ interface DashboardStats {
 }
 
 const Dashboard = () => {
-  const { profile, user } = useAuth();
+  const { profile, session } = useAuth();
   const { toast } = useToast();
   const [stats, setStats] = useState<DashboardStats>({
     employeeCount: 0,
@@ -30,7 +30,7 @@ const Dashboard = () => {
 
   // Fetch dashboard data
   useEffect(() => {
-    if (!user) return;
+    if (!session?.user) return;
 
     const fetchDashboardData = async () => {
       try {
@@ -63,10 +63,11 @@ const Dashboard = () => {
         }
         
         // Documents uploaded
+        const userId = session.user.id;
         promises.push(
           supabase.from('documents')
             .select('id', { count: 'exact', head: true })
-            .eq('employee_id', user.id)
+            .eq('uploaded_by', userId)
             .then(({ count, error }) => {
               if (error) throw error;
               return { documentsUploaded: count || 0 };
@@ -104,24 +105,6 @@ const Dashboard = () => {
         });
         
         setLoading(false);
-        
-        // Create a welcome notification for demo purposes
-        if (user) {
-          const { error } = await supabase
-            .from('notifications')
-            .insert([
-              {
-                user_id: user.id,
-                title: 'Welcome to TimeTrack',
-                message: 'Thank you for logging in to the TimeTrack HR system.',
-                read: false
-              }
-            ]);
-            
-          if (error && error.code !== '23505') { // Ignore duplicate key errors
-            console.error('Error creating notification:', error);
-          }
-        }
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
         toast({
@@ -134,7 +117,7 @@ const Dashboard = () => {
     };
 
     fetchDashboardData();
-  }, [user, profile, toast]);
+  }, [session, profile, toast]);
 
   const isAdminOrHR = profile?.role === "admin" || profile?.role === "hr";
 

@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 interface LeaveBalance {
   type: string;
@@ -23,6 +24,7 @@ const TimeOffCard = () => {
   ]);
   const [loading, setLoading] = useState(true);
   const { session } = useAuth();
+  const { toast } = useToast();
   
   // Fetch leave data from Supabase
   useEffect(() => {
@@ -35,15 +37,36 @@ const TimeOffCard = () => {
         // Get the current year
         const currentYear = new Date().getFullYear();
         
-        // Fetch timesheets for the current user this year
+        // First, get the employee id for the current user
+        const { data: employeeData, error: employeeError } = await supabase
+          .from('employees')
+          .select('id')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+          
+        if (employeeError) {
+          console.error("Error fetching employee data:", employeeError);
+          setLoading(false);
+          return;
+        }
+        
+        if (!employeeData) {
+          // User might not be an employee
+          setLoading(false);
+          return;
+        }
+        
+        // Fetch timesheets for this employee this year
         const { data: timesheets, error: timesheetError } = await supabase
           .from('timesheets')
           .select('id')
-          .eq('employee_id', session.user.id)
+          .eq('employee_id', employeeData.id)
           .eq('year', currentYear);
           
         if (timesheetError) {
-          throw new Error(timesheetError.message);
+          console.error("Error fetching timesheets:", timesheetError);
+          setLoading(false);
+          return;
         }
         
         if (!timesheets || timesheets.length === 0) {
@@ -63,7 +86,9 @@ const TimeOffCard = () => {
           .neq('leave_type', 'work');
           
         if (entriesError) {
-          throw new Error(entriesError.message);
+          console.error("Error fetching leave entries:", entriesError);
+          setLoading(false);
+          return;
         }
         
         if (!entries) {
@@ -95,12 +120,17 @@ const TimeOffCard = () => {
         setLoading(false);
       } catch (error) {
         console.error("Error fetching leave data:", error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Could not load leave balances",
+        });
         setLoading(false);
       }
     };
     
     fetchLeaveData();
-  }, [session]);
+  }, [session, toast]);
 
   return (
     <Card className="border-none shadow-md">

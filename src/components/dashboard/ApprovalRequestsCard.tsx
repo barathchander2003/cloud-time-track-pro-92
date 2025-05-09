@@ -8,6 +8,7 @@ import { ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
 interface ApprovalRequest {
   id: string;
@@ -22,6 +23,7 @@ const ApprovalRequestsCard = () => {
   const [loading, setLoading] = useState(true);
   const { session, profile } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
   
   // Fetch approval requests from Supabase
   useEffect(() => {
@@ -46,11 +48,7 @@ const ApprovalRequestsCard = () => {
             year, 
             month, 
             status, 
-            submitted_at,
-            employees!timesheet_employee_fkey (
-              first_name,
-              last_name
-            )
+            submitted_at
           `)
           .eq('status', 'pending')
           .order('submitted_at', { ascending: false })
@@ -61,25 +59,50 @@ const ApprovalRequestsCard = () => {
           throw new Error(error.message);
         }
         
-        // Format the requests for display
-        const requests = timesheets.map((ts: any) => ({
-          id: ts.id,
-          employee: `${ts.employees?.first_name || 'Unknown'} ${ts.employees?.last_name || 'User'}`,
-          type: "Monthly Timesheet",
-          date: `${getMonthName(ts.month)} ${ts.year}`,
-          status: ts.status as "pending" | "approved" | "rejected",
-        }));
+        // For each timesheet, get the employee details
+        const requestsPromises = timesheets.map(async (ts: any) => {
+          const { data: employeeData, error: employeeError } = await supabase
+            .from('employees')
+            .select('first_name, last_name')
+            .eq('id', ts.employee_id)
+            .single();
+            
+          if (employeeError) {
+            console.error("Error fetching employee:", employeeError);
+            return {
+              id: ts.id,
+              employee: "Unknown User",
+              type: "Monthly Timesheet",
+              date: `${getMonthName(ts.month)} ${ts.year}`,
+              status: ts.status as "pending" | "approved" | "rejected",
+            };
+          }
+          
+          return {
+            id: ts.id,
+            employee: `${employeeData?.first_name || 'Unknown'} ${employeeData?.last_name || 'User'}`,
+            type: "Monthly Timesheet",
+            date: `${getMonthName(ts.month)} ${ts.year}`,
+            status: ts.status as "pending" | "approved" | "rejected",
+          };
+        });
         
+        const requests = await Promise.all(requestsPromises);
         setApprovalRequests(requests);
       } catch (error) {
         console.error("Error loading approval requests:", error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to load approval requests",
+        });
       } finally {
         setLoading(false);
       }
     };
     
     fetchApprovalRequests();
-  }, [session, profile]);
+  }, [session, profile, toast]);
   
   const getMonthName = (monthNumber: number): string => {
     const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
