@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -32,17 +33,33 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 
+// Define the Employee interface to match our Supabase data structure
+interface Employee {
+  id: string;
+  first_name: string;
+  last_name: string;
+  role: string;
+  employment_type: string;
+  start_date: string;
+  email: string;
+  salaries?: {
+    amount: number;
+    currency: string;
+    salary_type: string;
+  }[];
+}
+
 interface EmployeeTableProps {
   employees: Employee[];
 }
 
 const EmployeeTable = ({ employees }: EmployeeTableProps) => {
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleEdit = (employee) => {
+  const handleEdit = (employee: Employee) => {
     // In a real app, this would navigate to an edit form
     console.log("Edit employee:", employee);
     toast({
@@ -84,12 +101,12 @@ const EmployeeTable = ({ employees }: EmployeeTableProps) => {
     }
   };
 
-  const confirmDeleteEmployee = (employee) => {
+  const confirmDeleteEmployee = (employee: Employee) => {
     setSelectedEmployee(employee);
     setConfirmDelete(true);
   };
 
-  const formatSalary = (employee) => {
+  const formatSalary = (employee: Employee) => {
     if (!employee.salaries || employee.salaries.length === 0) {
       return "Not set";
     }
@@ -99,7 +116,7 @@ const EmployeeTable = ({ employees }: EmployeeTableProps) => {
     return `${salary.amount} ${salary.currency} ${salary.salary_type === 'hourly' ? '/ hour' : salary.salary_type === 'daily' ? '/ day' : '/ month'}`;
   };
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString: string | null) => {
     if (!dateString) return "N/A";
     return format(new Date(dateString), "MMM dd, yyyy");
   };

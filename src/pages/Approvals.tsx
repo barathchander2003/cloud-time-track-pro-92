@@ -47,7 +47,8 @@ const Approvals = () => {
       <ApprovalList />
       
       {/* Add CSS for approval item highlighting */}
-      <style jsx global>{`
+      <style>
+        {`
         .highlight-pulse {
           animation: pulse 1.5s ease-in-out 2;
           box-shadow: 0 0 0 10px rgba(124, 58, 237, 0.2);
@@ -64,7 +65,8 @@ const Approvals = () => {
             box-shadow: 0 0 0 0 rgba(124, 58, 237, 0);
           }
         }
-      `}</style>
+        `}
+      </style>
     </div>
   );
 };

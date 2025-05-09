@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -356,14 +355,14 @@ const TimesheetCalendar = () => {
                     }
                   }}
                   components={{
-                    Day: ({ date, ...props }) => {
-                      const status = getDayStatus(date);
+                    Day: ({ day, ...props }) => {
+                      const status = getDayStatus(day);
                       return (
                         <div
                           {...props}
                           className={`${props.className} ${status} h-9 w-9 p-0 font-normal aria-selected:opacity-100`}
                         >
-                          {date.getDate()}
+                          {day.getDate()}
                         </div>
                       );
                     }
