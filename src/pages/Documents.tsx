@@ -1,6 +1,7 @@
 
 import { useEffect } from "react";
 import DocumentUploader from "@/components/documents/DocumentUploader";
+import DocumentList from "@/components/documents/DocumentList";
 
 const Documents = () => {
   // Initialize storage bucket if needed
@@ -40,6 +41,8 @@ const Documents = () => {
       </div>
 
       <DocumentUploader />
+      
+      <DocumentList />
     </div>
   );
 };

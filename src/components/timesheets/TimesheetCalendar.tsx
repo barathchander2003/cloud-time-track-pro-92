@@ -38,11 +38,12 @@ const TimesheetCalendar = () => {
   const [currentNotes, setCurrentNotes] = useState<string>("");
   const [activeTab, setActiveTab] = useState("entry");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [timesheetId, setTimesheetId] = useState<string | null>(null);
   const { toast } = useToast();
   const { session } = useAuth();
   
   // Format date key for timeEntries object - with safety check
-  const formatDateKey = (date: Date) => {
+  const formatDateKey = (date: Date | undefined) => {
     // Ensure the date is valid before formatting
     if (!date || !isValid(date)) {
       console.error("Invalid date provided to formatDateKey", date);
@@ -67,6 +68,32 @@ const TimesheetCalendar = () => {
       const year = month.getFullYear();
       const monthNum = month.getMonth() + 1;
       
+      // If using demo user, provide mock data
+      if (session.user.id === "demo-user-id") {
+        console.log("Using demo data for timesheet");
+        // Mock data for demonstration
+        const mockEntries = {
+          [format(new Date(year, monthNum - 1, 10), "yyyy-MM-dd")]: {
+            hours: 8,
+            leaveType: "work",
+            notes: "Regular work day"
+          },
+          [format(new Date(year, monthNum - 1, 15), "yyyy-MM-dd")]: {
+            hours: 8,
+            leaveType: "annual",
+            notes: "Annual leave"
+          },
+          [format(new Date(year, monthNum - 1, 20), "yyyy-MM-dd")]: {
+            hours: 8,
+            leaveType: "sick",
+            notes: "Sick leave"
+          }
+        };
+        setTimeEntries(mockEntries);
+        setTimesheetId("demo-timesheet-id");
+        return;
+      }
+      
       // First check if there's a timesheet for this month
       const { data: timesheetData, error: timesheetError } = await supabase
         .from('timesheets')
@@ -78,6 +105,11 @@ const TimesheetCalendar = () => {
         
       if (timesheetError) {
         console.error("Error fetching timesheet:", timesheetError);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to load timesheet data"
+        });
         return;
       }
       
@@ -96,13 +128,22 @@ const TimesheetCalendar = () => {
           
         if (newTimesheetError) {
           console.error("Error creating timesheet:", newTimesheetError);
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Failed to create new timesheet"
+          });
           return;
         }
         
         // Empty entries for a new timesheet
         setTimeEntries({});
+        setTimesheetId(newTimesheetData.id);
         return;
       }
+      
+      // Store timesheet ID
+      setTimesheetId(timesheetData.id);
       
       // Fetch entries for existing timesheet
       const { data: entriesData, error: entriesError } = await supabase
@@ -112,6 +153,11 @@ const TimesheetCalendar = () => {
         
       if (entriesError) {
         console.error("Error fetching timesheet entries:", entriesError);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to load timesheet entries"
+        });
         return;
       }
       
@@ -138,8 +184,8 @@ const TimesheetCalendar = () => {
       console.error("Error loading timesheet data:", error);
       toast({
         variant: "destructive",
-        title: "Failed to load timesheet data",
-        description: "Please try again later."
+        title: "Error",
+        description: "Failed to load timesheet data"
       });
     }
   };
@@ -148,6 +194,25 @@ const TimesheetCalendar = () => {
   useEffect(() => {
     loadTimeEntries();
   }, [month, session]);
+
+  // Effect to update form when selected date changes
+  useEffect(() => {
+    if (selectedDate) {
+      const dateKey = formatDateKey(selectedDate);
+      const entry = timeEntries[dateKey];
+      
+      if (entry) {
+        setCurrentHours(entry.hours);
+        setCurrentLeaveType(entry.leaveType);
+        setCurrentNotes(entry.notes);
+      } else {
+        // Default values for new entry
+        setCurrentHours(8);
+        setCurrentLeaveType("work");
+        setCurrentNotes("");
+      }
+    }
+  }, [selectedDate, timeEntries]);
   
   // Save the current entry to Supabase
   const saveEntry = async () => {
@@ -155,26 +220,32 @@ const TimesheetCalendar = () => {
     
     try {
       setIsSubmitting(true);
-      const year = selectedDate.getFullYear();
-      const monthNum = selectedDate.getMonth() + 1;
       const dateKey = formatDateKey(selectedDate);
       
-      // Get or create timesheet for this month
-      const { data: timesheetData, error: timesheetError } = await supabase
-        .from('timesheets')
-        .select('id')
-        .eq('employee_id', session.user.id)
-        .eq('year', year)
-        .eq('month', monthNum)
-        .maybeSingle();
-        
-      if (timesheetError) {
-        throw new Error("Error fetching timesheet: " + timesheetError.message);
+      // If using demo user, just update local state
+      if (session.user.id === "demo-user-id") {
+        console.log("Demo user - updating local timesheet state only");
+        setTimeEntries((prev) => ({
+          ...prev,
+          [dateKey]: {
+            hours: currentHours,
+            leaveType: currentLeaveType,
+            notes: currentNotes,
+          },
+        }));
+        toast({
+          title: "Entry saved",
+          description: "Your timesheet entry has been saved (demo mode).",
+        });
+        setIsSubmitting(false);
+        return;
       }
       
-      let timesheetId;
-      
-      if (!timesheetData) {
+      // If we don't have a timesheet ID yet, we need to create one
+      if (!timesheetId) {
+        const year = selectedDate.getFullYear();
+        const monthNum = selectedDate.getMonth() + 1;
+        
         // Create a new timesheet
         const { data: newTimesheet, error: createError } = await supabase
           .from('timesheets')
@@ -191,9 +262,7 @@ const TimesheetCalendar = () => {
           throw new Error("Error creating timesheet: " + createError.message);
         }
         
-        timesheetId = newTimesheet.id;
-      } else {
-        timesheetId = timesheetData.id;
+        setTimesheetId(newTimesheet.id);
       }
       
       // Check if entry exists
@@ -254,9 +323,6 @@ const TimesheetCalendar = () => {
         description: "Your timesheet entry has been saved.",
       });
       
-      // Reset notes after saving
-      setCurrentNotes("");
-      
     } catch (error: any) {
       console.error("Error saving entry:", error);
       toast({
@@ -275,8 +341,26 @@ const TimesheetCalendar = () => {
     
     try {
       setIsSubmitting(true);
+      
+      // If using demo user, just simulate success
+      if (session.user.id === "demo-user-id") {
+        setTimeout(() => {
+          toast({
+            title: "Timesheet submitted",
+            description: "Your timesheet has been submitted for approval (demo mode).",
+          });
+          setIsSubmitting(false);
+        }, 1000);
+        return;
+      }
+      
       const year = month.getFullYear();
       const monthNum = month.getMonth() + 1;
+      
+      // Make sure we have a timesheetId
+      if (!timesheetId) {
+        throw new Error("No timesheet found to submit");
+      }
       
       // Update timesheet status
       const { error } = await supabase
@@ -285,9 +369,7 @@ const TimesheetCalendar = () => {
           status: 'pending',
           submitted_at: new Date().toISOString()
         })
-        .eq('employee_id', session.user.id)
-        .eq('year', year)
-        .eq('month', monthNum);
+        .eq('id', timesheetId);
         
       if (error) {
         throw new Error("Error submitting timesheet: " + error.message);
@@ -385,7 +467,7 @@ const TimesheetCalendar = () => {
                       const status = getDayStatus(props.date);
                       return (
                         <div
-                          onClick={() => props.selectDay && props.selectDay(props.date)}
+                          onClick={() => props.onSelect?.(props.date)}
                           className={`${status} h-9 w-9 p-0 font-normal aria-selected:opacity-100`}
                         >
                           {props.date.getDate()}

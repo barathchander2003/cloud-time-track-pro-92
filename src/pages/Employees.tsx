@@ -1,14 +1,13 @@
 
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import EmployeeTable from "@/components/employees/EmployeeTable";
-import EmployeeHeader from "@/components/employees/EmployeeHeader";
 import EmployeeSearch from "@/components/employees/EmployeeSearch";
 import NewEmployeeForm from "@/components/employees/NewEmployeeForm";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
 import { Employee } from "@/types/employee";
 
 const Employees = () => {
@@ -46,7 +45,8 @@ const Employees = () => {
         work_location: emp.work_location,
         mobile_number: emp.mobile_number,
         end_date: emp.end_date,
-        employee_number: emp.employee_number
+        employee_number: emp.employee_number,
+        date_of_birth: emp.date_of_birth
       }));
       
       setEmployees(employeesData);
@@ -120,19 +120,9 @@ const Employees = () => {
         </Button>
       </div>
       
-      <EmployeeHeader 
-        newEmployeeOpen={newEmployeeOpen}
-        setNewEmployeeOpen={setNewEmployeeOpen}
-      />
+      <EmployeeSearch onSearch={handleSearch} />
       
-      <EmployeeSearch 
-        onSearch={handleSearch}
-      />
-      
-      <EmployeeTable 
-        employees={filteredEmployees} 
-        loading={loading}
-      />
+      <EmployeeTable employees={filteredEmployees} loading={loading} />
       
       {newEmployeeOpen && (
         <NewEmployeeForm

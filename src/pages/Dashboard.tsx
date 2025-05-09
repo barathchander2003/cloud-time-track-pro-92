@@ -10,6 +10,7 @@ import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
+import { useNavigate } from "react-router-dom";
 
 interface DashboardStats {
   employeeCount: number;
@@ -21,6 +22,7 @@ interface DashboardStats {
 const Dashboard = () => {
   const { profile, session } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats>({
     employeeCount: 0,
     pendingApprovals: 0,
@@ -71,10 +73,13 @@ const Dashboard = () => {
                 console.log("Employee count fetched:", count);
                 return { employeeCount: count || 0 };
               })
-              .catch(error => {
-                console.error("Failed employee count fetch:", error);
-                return { employeeCount: 0 };
-              })
+              .then(
+                result => result,
+                error => {
+                  console.error("Failed employee count fetch:", error);
+                  return { employeeCount: 0 };
+                }
+              )
           );
           
           // Pending approvals
@@ -90,10 +95,13 @@ const Dashboard = () => {
                 console.log("Pending approvals fetched:", count);
                 return { pendingApprovals: count || 0 };
               })
-              .catch(error => {
-                console.error("Failed pending approvals fetch:", error);
-                return { pendingApprovals: 0 };
-              })
+              .then(
+                result => result,
+                error => {
+                  console.error("Failed pending approvals fetch:", error);
+                  return { pendingApprovals: 0 };
+                }
+              )
           );
         }
         
@@ -111,10 +119,13 @@ const Dashboard = () => {
               console.log("Documents count fetched:", count);
               return { documentsUploaded: count || 0 };
             })
-            .catch(error => {
-              console.error("Failed documents count fetch:", error);
-              return { documentsUploaded: 0 };
-            })
+            .then(
+              result => result,
+              error => {
+                console.error("Failed documents count fetch:", error);
+                return { documentsUploaded: 0 };
+              }
+            )
         );
         
         // Current month's timesheets
@@ -135,10 +146,13 @@ const Dashboard = () => {
               console.log("Timesheets count fetched:", count);
               return { timesheets: count || 0 };
             })
-            .catch(error => {
-              console.error("Failed timesheets count fetch:", error);
-              return { timesheets: 0 };
-            })
+            .then(
+              result => result,
+              error => {
+                console.error("Failed timesheets count fetch:", error);
+                return { timesheets: 0 };
+              }
+            )
         );
         
         // Process all promises
@@ -187,6 +201,11 @@ const Dashboard = () => {
   }, [session, profile, toast]);
 
   const isAdminOrHR = profile?.role === "admin" || profile?.role === "hr";
+  
+  // Handle time off request
+  const handleTimeOffRequest = () => {
+    navigate("/timesheets");
+  };
 
   return (
     <div className="space-y-6">
@@ -250,7 +269,7 @@ const Dashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        <TimeOffCard />
+        <TimeOffCard onRequestTimeOff={handleTimeOffRequest} />
         <ActivityCard />
         {isAdminOrHR && <RecentEmployeesCard />}
       </div>

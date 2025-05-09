@@ -10,7 +10,8 @@ export const employees: Employee[] = [
     role: "Senior Project Manager",
     employment_type: "full-time",
     start_date: "2023-01-15",
-    work_location: "London, UK"
+    work_location: "London, UK",
+    date_of_birth: "1988-05-12"
   },
   {
     id: "EMP002",
@@ -20,7 +21,8 @@ export const employees: Employee[] = [
     role: "Software Engineer",
     employment_type: "contractor",
     start_date: "2023-02-01",
-    work_location: "London, UK"
+    work_location: "London, UK",
+    date_of_birth: "1992-08-24"
   },
   {
     id: "EMP003",
@@ -30,7 +32,8 @@ export const employees: Employee[] = [
     role: "UX Designer",
     employment_type: "full-time",
     start_date: "2023-03-15",
-    work_location: "India"
+    work_location: "India",
+    date_of_birth: "1990-03-17"
   },
   {
     id: "EMP004",
@@ -40,7 +43,8 @@ export const employees: Employee[] = [
     role: "Data Analyst",
     employment_type: "full-time",
     start_date: "2023-04-01",
-    work_location: "Hungary"
+    work_location: "Hungary",
+    date_of_birth: "1985-11-03"
   },
   {
     id: "EMP005",
@@ -50,6 +54,7 @@ export const employees: Employee[] = [
     role: "Product Manager",
     employment_type: "contractor",
     start_date: "2023-05-01",
-    work_location: "Germany"
+    work_location: "Germany",
+    date_of_birth: "1991-07-28"
   }
 ];

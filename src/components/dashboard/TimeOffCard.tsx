@@ -16,7 +16,11 @@ interface LeaveBalance {
   color: string;
 }
 
-const TimeOffCard = () => {
+interface TimeOffCardProps {
+  onRequestTimeOff?: () => void;
+}
+
+const TimeOffCard = ({ onRequestTimeOff }: TimeOffCardProps) => {
   const [leaveBalances, setLeaveBalances] = useState<LeaveBalance[]>([
     { type: "annual", name: "Annual Leave", used: 0, total: 25, color: "bg-blue-500" },
     { type: "sick", name: "Sick Leave", used: 0, total: 10, color: "bg-red-500" },
@@ -156,6 +160,13 @@ const TimeOffCard = () => {
     fetchLeaveData();
   }, [session, toast]);
 
+  // Handle time off request button click
+  const handleRequestTimeOff = () => {
+    if (onRequestTimeOff) {
+      onRequestTimeOff();
+    }
+  };
+
   return (
     <Card className="border-none shadow-md hover:shadow-lg transition-shadow duration-300">
       <CardHeader className="bg-gradient-to-r from-blue-50 to-teal-50 rounded-t-lg">
@@ -188,7 +199,11 @@ const TimeOffCard = () => {
             <CheckCircle2 className="h-12 w-12 text-green-500 mb-3" />
             <p className="text-lg font-medium text-green-700">No leave taken yet this year</p>
             <p className="text-sm text-gray-500 mt-1">Your full balance is available</p>
-            <Button variant="outline" className="w-full mt-6 border-blue-200 text-blue-600 hover:bg-blue-50">
+            <Button 
+              variant="outline" 
+              className="w-full mt-6 border-blue-200 text-blue-600 hover:bg-blue-50"
+              onClick={handleRequestTimeOff}
+            >
               Request Time Off
             </Button>
           </div>
@@ -210,7 +225,11 @@ const TimeOffCard = () => {
               </div>
             ))}
             
-            <Button variant="outline" className="w-full mt-4 border-blue-200 text-blue-600 hover:bg-blue-50">
+            <Button 
+              variant="outline" 
+              className="w-full mt-4 border-blue-200 text-blue-600 hover:bg-blue-50"
+              onClick={handleRequestTimeOff}
+            >
               Request Time Off
             </Button>
           </div>

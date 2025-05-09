@@ -14,21 +14,23 @@ const Approvals = () => {
       
       if (approvalId) {
         // Find the approval card element by data-id attribute
-        const approvalElement = document.querySelector(`[data-id="${approvalId}"]`);
-        
-        if (approvalElement) {
-          // Scroll to the approval element
-          approvalElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => {
+          const approvalElement = document.querySelector(`[data-id="${approvalId}"]`);
           
-          // Highlight the element temporarily
-          approvalElement.classList.add('highlight-pulse');
-          setTimeout(() => {
-            approvalElement.classList.remove('highlight-pulse');
-          }, 3000);
-        }
-        
-        // Remove the query parameter from the URL
-        navigate("/approvals", { replace: true });
+          if (approvalElement) {
+            // Scroll to the approval element
+            approvalElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Highlight the element temporarily
+            approvalElement.classList.add('highlight-pulse');
+            setTimeout(() => {
+              approvalElement.classList.remove('highlight-pulse');
+            }, 3000);
+          }
+          
+          // Remove the query parameter from the URL
+          navigate("/approvals", { replace: true });
+        }, 500); // Give time for the list to render
       }
     };
     

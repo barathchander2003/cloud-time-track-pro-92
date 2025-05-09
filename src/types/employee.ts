@@ -11,6 +11,7 @@ export interface Employee {
   mobile_number?: string;
   end_date?: string | null;
   employee_number?: string | null;
+  date_of_birth?: string | null;
   salaries?: {
     amount: number;
     currency: string;
@@ -32,3 +33,7 @@ export interface EmployeeTableProps {
   loading: boolean;
 }
 
+export interface NewEmployeeFormProps {
+  onClose: () => void;
+  onSuccess?: () => void;
+}
