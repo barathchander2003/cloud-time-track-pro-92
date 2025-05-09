@@ -1,9 +1,9 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { ReactNode } from "react";
 
 import Layout from "./components/Layout";
 import EmployeeLayout from "./components/EmployeeLayout";
@@ -28,26 +28,28 @@ import { LoadingSpinner } from "./components/ui/loading-spinner";
 const queryClient = new QueryClient();
 
 // Protected route component that checks authentication
-const ProtectedRoute = ({ allowedRoles }: { allowedRoles?: string[] }) => {
+interface ProtectedRouteProps {
+  allowedRoles?: string[];
+}
+
+const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
   const { session, isLoading, profile } = useAuth();
-  
+
   if (isLoading) {
     return <LoadingSpinner />;
   }
-  
+
   if (!session) {
     return <Navigate to="/login" replace />;
   }
-  
-  // Check role restrictions if specified
+
   if (allowedRoles && profile && !allowedRoles.includes(profile.role)) {
-    // Redirect employee users to employee dashboard
     if (profile.role === "user" || profile.role === "employee") {
       return <Navigate to="/employee" replace />;
     }
     return <Navigate to="/dashboard" replace />;
   }
-  
+
   return <Outlet />;
 };
 
@@ -63,20 +65,19 @@ const ProtectedLayout = () => {
 // Employee route - only for employee/user role
 const EmployeeRoute = () => {
   const { session, isLoading, profile } = useAuth();
-  
+
   if (isLoading) {
     return <LoadingSpinner />;
   }
-  
+
   if (!session) {
     return <Navigate to="/login" replace />;
   }
-  
-  // If admin/hr, redirect to main dashboard
+
   if (profile && (profile.role === "admin" || profile.role === "hr")) {
     return <Navigate to="/dashboard" replace />;
   }
-  
+
   return <Outlet />;
 };
 
@@ -99,7 +100,7 @@ const AppRoutes = () => {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/confirm-email" element={<ConfirmEmail />} />
-      
+
       {/* Employee routes */}
       <Route element={<EmployeeRoute />}>
         <Route element={<EmployeeLayoutWrapper />}>
@@ -109,7 +110,7 @@ const AppRoutes = () => {
           <Route path="/employee/documents" element={<Documents />} />
         </Route>
       </Route>
-      
+
       {/* Protected routes */}
       <Route element={<ProtectedRoute />}>
         <Route element={<ProtectedLayout />}>
@@ -118,7 +119,7 @@ const AppRoutes = () => {
           <Route path="/approvals" element={<Approvals />} />
         </Route>
       </Route>
-      
+
       {/* Admin/HR only routes */}
       <Route element={<ProtectedRoute allowedRoles={["admin", "hr"]} />}>
         <Route element={<ProtectedLayout />}>
@@ -127,14 +128,14 @@ const AppRoutes = () => {
           <Route path="/reports" element={<Reports />} />
         </Route>
       </Route>
-      
+
       {/* Admin only routes */}
       <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
         <Route element={<ProtectedLayout />}>
           <Route path="/settings" element={<Settings />} />
         </Route>
       </Route>
-      
+
       {/* Catch-all route */}
       <Route path="*" element={<NotFound />} />
     </Routes>
