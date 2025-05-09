@@ -4,57 +4,52 @@ import { Employee } from "@/types/employee";
 export const employees: Employee[] = [
   {
     id: "EMP001",
-    firstName: "Sarah",
-    lastName: "Johnson",
+    first_name: "Sarah",
+    last_name: "Johnson",
     email: "sarah.johnson@example.com",
-    jobTitle: "Senior Project Manager",
-    organization: "Market Cloud Ltd, London, UK",
-    employmentType: "full-time",
-    status: "active",
-    initials: "SJ"
+    role: "Senior Project Manager",
+    employment_type: "full-time",
+    start_date: "2023-01-15",
+    work_location: "London, UK"
   },
   {
     id: "EMP002",
-    firstName: "Michael",
-    lastName: "Chen",
+    first_name: "Michael",
+    last_name: "Chen",
     email: "michael.chen@example.com",
-    jobTitle: "Software Engineer",
-    organization: "Market Cloud Ltd, London, UK",
-    employmentType: "contractor",
-    status: "active",
-    initials: "MC"
+    role: "Software Engineer",
+    employment_type: "contractor",
+    start_date: "2023-02-01",
+    work_location: "London, UK"
   },
   {
     id: "EMP003",
-    firstName: "Jessica",
-    lastName: "Williams",
+    first_name: "Jessica",
+    last_name: "Williams",
     email: "jessica.williams@example.com",
-    jobTitle: "UX Designer",
-    organization: "Saas Market Cloud Software Pvt. Ltd, India",
-    employmentType: "full-time",
-    status: "active",
-    initials: "JW"
+    role: "UX Designer",
+    employment_type: "full-time",
+    start_date: "2023-03-15",
+    work_location: "India"
   },
   {
     id: "EMP004",
-    firstName: "David",
-    lastName: "Rodriguez",
+    first_name: "David",
+    last_name: "Rodriguez",
     email: "david.rodriguez@example.com",
-    jobTitle: "Data Analyst",
-    organization: "Market Cloud KFT, Hungary",
-    employmentType: "full-time",
-    status: "active",
-    initials: "DR"
+    role: "Data Analyst",
+    employment_type: "full-time",
+    start_date: "2023-04-01",
+    work_location: "Hungary"
   },
   {
     id: "EMP005",
-    firstName: "Emily",
-    lastName: "Davis",
+    first_name: "Emily",
+    last_name: "Davis",
     email: "emily.davis@example.com",
-    jobTitle: "Product Manager",
-    organization: "Market Cloud ScientiFix GmbH, Germany",
-    employmentType: "contractor",
-    status: "active",
-    initials: "ED"
+    role: "Product Manager",
+    employment_type: "contractor",
+    start_date: "2023-05-01",
+    work_location: "Germany"
   }
 ];

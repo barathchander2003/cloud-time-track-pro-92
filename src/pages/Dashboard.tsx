@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Clock, Users, CheckSquare, FileText } from "lucide-react";
+import { Clock, Users, CheckSquare, FileText, AlertCircle } from "lucide-react";
 import StatsCard from "@/components/dashboard/StatsCard";
 import TimeOffCard from "@/components/dashboard/TimeOffCard";
 import ActivityCard from "@/components/dashboard/ActivityCard";
@@ -9,6 +9,7 @@ import ApprovalRequestsCard from "@/components/dashboard/ApprovalRequestsCard";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface DashboardStats {
   employeeCount: number;
@@ -27,6 +28,7 @@ const Dashboard = () => {
     timesheets: 0
   });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Fetch dashboard data
   useEffect(() => {
@@ -35,6 +37,23 @@ const Dashboard = () => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
+        setError(null);
+        
+        console.log("Starting to fetch dashboard data...");
+        
+        // Use demo data if in development
+        if (session.user.id === "demo-user-id") {
+          console.log("Using demo data for dashboard");
+          // Set mock data for demo user
+          setStats({
+            employeeCount: 32,
+            pendingApprovals: 5,
+            documentsUploaded: 45,
+            timesheets: 28
+          });
+          setLoading(false);
+          return;
+        }
         
         // Fetch real stats from Supabase
         const promises = [];
@@ -45,8 +64,16 @@ const Dashboard = () => {
             supabase.from('employees')
               .select('id', { count: 'exact', head: true })
               .then(({ count, error }) => {
-                if (error) throw error;
+                if (error) {
+                  console.error("Error fetching employee count:", error);
+                  throw error;
+                }
+                console.log("Employee count fetched:", count);
                 return { employeeCount: count || 0 };
+              })
+              .catch(error => {
+                console.error("Failed employee count fetch:", error);
+                return { employeeCount: 0 };
               })
           );
           
@@ -56,8 +83,16 @@ const Dashboard = () => {
               .select('id', { count: 'exact', head: true })
               .eq('status', 'pending')
               .then(({ count, error }) => {
-                if (error) throw error;
+                if (error) {
+                  console.error("Error fetching pending approvals:", error);
+                  throw error;
+                }
+                console.log("Pending approvals fetched:", count);
                 return { pendingApprovals: count || 0 };
+              })
+              .catch(error => {
+                console.error("Failed pending approvals fetch:", error);
+                return { pendingApprovals: 0 };
               })
           );
         }
@@ -69,8 +104,16 @@ const Dashboard = () => {
             .select('id', { count: 'exact', head: true })
             .eq('uploaded_by', userId)
             .then(({ count, error }) => {
-              if (error) throw error;
+              if (error) {
+                console.error("Error fetching documents count:", error);
+                throw error;
+              }
+              console.log("Documents count fetched:", count);
               return { documentsUploaded: count || 0 };
+            })
+            .catch(error => {
+              console.error("Failed documents count fetch:", error);
+              return { documentsUploaded: 0 };
             })
         );
         
@@ -85,16 +128,30 @@ const Dashboard = () => {
             .eq('year', currentYear)
             .eq('month', currentMonth)
             .then(({ count, error }) => {
-              if (error) throw error;
+              if (error) {
+                console.error("Error fetching timesheets count:", error);
+                throw error;
+              }
+              console.log("Timesheets count fetched:", count);
               return { timesheets: count || 0 };
+            })
+            .catch(error => {
+              console.error("Failed timesheets count fetch:", error);
+              return { timesheets: 0 };
             })
         );
         
         // Process all promises
-        const results = await Promise.all(promises);
+        const results = await Promise.allSettled(promises);
+        console.log("All dashboard data promises settled:", results);
         
-        // Combine results
-        const newStats = results.reduce((acc, result) => ({ ...acc, ...result }), {} as DashboardStats);
+        // Combine results from successful promises
+        const newStats = results.reduce((acc, result) => {
+          if (result.status === 'fulfilled') {
+            return { ...acc, ...result.value };
+          }
+          return acc;
+        }, {} as DashboardStats);
         
         // Set default values for any missing properties
         setStats({
@@ -107,11 +164,21 @@ const Dashboard = () => {
         setLoading(false);
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
+        setError("Could not load dashboard data. Please try again later.");
         toast({
           variant: "destructive",
           title: "Error",
           description: "Could not load dashboard data",
         });
+        
+        // Use fallback data on error
+        setStats({
+          employeeCount: 0,
+          pendingApprovals: 0,
+          documentsUploaded: 0,
+          timesheets: 0
+        });
+        
         setLoading(false);
       }
     };
@@ -123,12 +190,21 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6">
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg shadow-sm">
+      <div className="bg-gradient-to-r from-sky-100 to-indigo-100 p-6 rounded-lg shadow-sm border border-sky-200">
         <h2 className="text-3xl font-bold tracking-tight text-blue-800">Dashboard</h2>
         <p className="text-blue-600">
-          Welcome back, {profile?.first_name || profile?.role}
+          Welcome back, {profile?.first_name || "User"}
         </p>
       </div>
+
+      {error && (
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="p-4 flex items-center gap-2 text-red-700">
+            <AlertCircle className="h-5 w-5" />
+            <p>{error}</p>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
         {isAdminOrHR && (

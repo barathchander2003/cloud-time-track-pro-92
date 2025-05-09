@@ -11,6 +11,11 @@ export interface Employee {
   mobile_number?: string;
   end_date?: string | null;
   employee_number?: string | null;
+  salaries?: {
+    amount: number;
+    currency: string;
+    salary_type: string;
+  }[];
 }
 
 export interface EmployeeHeaderProps {
@@ -21,3 +26,9 @@ export interface EmployeeHeaderProps {
 export interface EmployeeSearchProps {
   onSearch: (query: string) => void;
 }
+
+export interface EmployeeTableProps {
+  employees: Employee[];
+  loading: boolean;
+}
+
