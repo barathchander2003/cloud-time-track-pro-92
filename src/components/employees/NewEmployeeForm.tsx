@@ -1,9 +1,11 @@
+
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { format } from "date-fns";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 import { 
   Form, 
   FormControl, 
@@ -105,6 +107,7 @@ type EmployeeValues = z.infer<typeof employeeSchema>;
 
 const NewEmployeeForm = ({ onClose, onSuccess }) => {
   const { toast } = useToast();
+  const { session } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState("personal");
   
@@ -241,9 +244,6 @@ const NewEmployeeForm = ({ onClose, onSuccess }) => {
       if (onSuccess) {
         onSuccess();
       }
-      
-      // Refresh page to show new employee
-      window.location.reload();
       
     } catch (error: any) {
       console.error("Error submitting form:", error);

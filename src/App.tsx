@@ -47,11 +47,7 @@ const ProtectedRoute = ({ allowedRoles }: { allowedRoles?: string[] }) => {
     return <Navigate to="/dashboard" replace />;
   }
   
-  return (
-    <Layout>
-      <Outlet />
-    </Layout>
-  );
+  return <Layout><Outlet /></Layout>;
 };
 
 // Employee route - only for employee/user role
@@ -71,11 +67,7 @@ const EmployeeRoute = () => {
     return <Navigate to="/dashboard" replace />;
   }
   
-  return (
-    <EmployeeLayout>
-      <Outlet />
-    </EmployeeLayout>
-  );
+  return <EmployeeLayout><Outlet /></EmployeeLayout>;
 };
 
 // Route wrapper for the AuthProvider

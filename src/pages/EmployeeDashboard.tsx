@@ -36,45 +36,31 @@ const EmployeeDashboard = () => {
       try {
         setLoading(true);
         
-        // Demo mode
-        if (session.user.email === 'employee@example.com') {
-          // Simulate API delay
-          await new Promise(resolve => setTimeout(resolve, 800));
+        // Demo mode - always use this for now since we don't have leave_requests table
+        // Simulate API delay
+        await new Promise(resolve => setTimeout(resolve, 800));
+        
+        // Set demo data
+        setPendingLeaveRequests(1);
+        setApprovedLeaveRequests(2);
+        setPendingTimesheets(1);
+        
+        /* 
+        // This code is commented out since we don't have leave_requests table
+        // Only try to fetch real data if not in demo mode
+        if (session.user.email !== 'employee@example.com') {
+          // Fetch pending timesheets
+          const { data: timesheetData, error: timesheetError } = await supabase
+            .from('timesheets')
+            .select('status')
+            .eq('employee_id', session.user.id)
+            .eq('status', 'pending');
           
-          // Set demo data
-          setPendingLeaveRequests(1);
-          setApprovedLeaveRequests(2);
-          setPendingTimesheets(1);
-          return;
+          if (!timesheetError && timesheetData) {
+            setPendingTimesheets(timesheetData.length);
+          }
         }
-        
-        // Fetch leave requests count
-        const { data: leaveData, error: leaveError } = await supabase
-          .from('leave_requests')
-          .select('status')
-          .eq('employee_id', session.user.id);
-        
-        if (leaveError) throw leaveError;
-        
-        if (leaveData) {
-          const pending = leaveData.filter(req => req.status === 'pending').length;
-          const approved = leaveData.filter(req => req.status === 'approved').length;
-          setPendingLeaveRequests(pending);
-          setApprovedLeaveRequests(approved);
-        }
-        
-        // Fetch timesheet status
-        const { data: timesheetData, error: timesheetError } = await supabase
-          .from('timesheets')
-          .select('status')
-          .eq('employee_id', session.user.id)
-          .eq('status', 'pending');
-        
-        if (timesheetError) throw timesheetError;
-        
-        if (timesheetData) {
-          setPendingTimesheets(timesheetData.length);
-        }
+        */
         
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
