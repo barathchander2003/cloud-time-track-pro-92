@@ -71,10 +71,47 @@ const LoginForm = () => {
     }
   };
 
-  const handleQuickLogin = () => {
-    form.setValue("email", "admin@example.com");
-    form.setValue("password", "password123");
-    form.handleSubmit(onSubmit)();
+  const handleDemoLogin = () => {
+    setLoading(true);
+    
+    // Create fixed demo credentials
+    const demoCredentials = {
+      email: "admin@example.com",
+      password: "password123"
+    };
+    
+    form.setValue("email", demoCredentials.email);
+    form.setValue("password", demoCredentials.password);
+    
+    // Manually trigger submission with demo credentials
+    signIn(demoCredentials.email, demoCredentials.password)
+      .then(({ data: sessionData, error }) => {
+        if (error) {
+          console.error("Demo login error:", error);
+          toast({
+            variant: "destructive",
+            title: "Demo login failed",
+            description: error.message || "Could not log in with demo account.",
+          });
+        } else if (sessionData) {
+          toast({
+            title: "Demo login successful",
+            description: "Welcome to TimeTrack HR system.",
+          });
+          navigate("/dashboard");
+        }
+      })
+      .catch((error) => {
+        console.error("Unexpected demo login error:", error);
+        toast({
+          variant: "destructive",
+          title: "Demo login failed",
+          description: "An unexpected error occurred.",
+        });
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   };
 
   return (
@@ -123,10 +160,10 @@ const LoginForm = () => {
             type="button" 
             variant="outline" 
             className="w-full" 
-            onClick={handleQuickLogin}
+            onClick={handleDemoLogin}
             disabled={loading}
           >
-            Quick Demo Login
+            Demo Login (HR/Admin)
           </Button>
         </form>
       </Form>

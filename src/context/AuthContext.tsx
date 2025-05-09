@@ -149,13 +149,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (email === "admin@example.com" && password === "password123") {
         console.log("Using demo credentials - creating mock session");
         
-        // Mock a successful login for demo purposes
+        // Create a proper User object with all required fields
         const mockUser = {
           id: "demo-user-id",
           email: email,
           user_metadata: { name: "Admin User" },
-          app_metadata: { role: "admin" }
-        } as User;
+          app_metadata: { role: "admin" },
+          aud: "authenticated",
+          created_at: new Date().toISOString(),
+          // Add other required properties from the User type
+          role: "",
+          confirmed_at: "",
+          last_sign_in_at: "",
+          updated_at: "",
+          identities: [],
+          factors: [],
+        } as unknown as User;
         
         // Create a mock session
         const mockSession = {
