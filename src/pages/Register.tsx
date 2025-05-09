@@ -14,6 +14,13 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Clock, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,6 +33,9 @@ const registerSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
   password: z.string().min(6, { message: "Password must be at least 6 characters." }),
   confirmPassword: z.string().min(1, { message: "Please confirm your password." }),
+  role: z.enum(["admin", "hr", "employee"], {
+    required_error: "Please select a role."
+  })
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match.",
   path: ["confirmPassword"],
@@ -51,7 +61,8 @@ const Register = () => {
       lastName: "",
       email: "",
       password: "",
-      confirmPassword: ""
+      confirmPassword: "",
+      role: "employee"
     },
   });
 
@@ -66,6 +77,7 @@ const Register = () => {
           data: {
             first_name: data.firstName,
             last_name: data.lastName,
+            role: data.role
           }
         }
       });
@@ -81,7 +93,7 @@ const Register = () => {
           title: "Registration successful",
           description: "Please check your email to confirm your account.",
         });
-        navigate("/login");
+        navigate("/login?registered=true");
       }
     } catch (error) {
       console.error("Registration error:", error);
@@ -156,6 +168,31 @@ const Register = () => {
                       <FormControl>
                         <Input placeholder="john.doe@example.com" {...field} />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="role"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Role</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select your role" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="admin">Administrator</SelectItem>
+                          <SelectItem value="hr">HR Manager</SelectItem>
+                          <SelectItem value="employee">Employee</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}

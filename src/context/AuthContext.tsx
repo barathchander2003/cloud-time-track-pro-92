@@ -58,16 +58,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       if (error) {
         console.error("Error fetching profile:", error);
-        // If profile doesn't exist, create a mock profile for demo purposes
-        return { id: userId, role: "admin" };
+        // If profile doesn't exist, use the user's metadata for role
+        const { data } = await supabase.auth.getUser();
+        const userRole = data?.user?.user_metadata?.role || 'employee';
+        
+        return { 
+          id: userId, 
+          role: userRole,
+          first_name: data?.user?.user_metadata?.first_name,
+          last_name: data?.user?.user_metadata?.last_name
+        };
       }
       
       console.log("Profile fetched:", data);
       return data as UserProfile;
     } catch (error) {
       console.error("Error in fetchProfile:", error);
-      // Return a mock profile for demo purposes
-      return { id: userId, role: "admin" };
+      return { id: userId, role: "employee" };
     }
   };
 
@@ -153,7 +160,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const mockUser = {
           id: "demo-user-id",
           email: email,
-          user_metadata: { name: "Admin User" },
+          user_metadata: { name: "Admin User", role: "admin" },
           app_metadata: { role: "admin" },
           aud: "authenticated",
           created_at: new Date().toISOString(),

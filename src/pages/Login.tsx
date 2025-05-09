@@ -1,6 +1,6 @@
 
-import { useState } from "react";
-import { Navigate, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Navigate, Link, useLocation } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -15,10 +15,11 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Clock, ArrowRight, Loader2 } from "lucide-react";
+import { Clock, ArrowRight, Loader2, AlertCircle, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
@@ -31,6 +32,13 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const { session, isLoading } = useAuth();
+  const location = useLocation();
+  const [registered, setRegistered] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    setRegistered(params.get("registered") === "true");
+  }, [location]);
 
   const form = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
@@ -128,6 +136,15 @@ const Login = () => {
           </p>
         </div>
         
+        {registered && (
+          <Alert className="mb-6 bg-green-50 border-green-200 text-green-800">
+            <CheckCircle className="h-4 w-4 text-green-600" />
+            <AlertDescription>
+              Registration successful! Please check your email to confirm your account.
+            </AlertDescription>
+          </Alert>
+        )}
+        
         <Card className="border-none shadow-xl overflow-hidden">
           <div className="h-1.5 bg-gradient-to-r from-blue-500 to-indigo-600"></div>
           <CardHeader className="space-y-1">
@@ -224,15 +241,15 @@ const Login = () => {
             </Button>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4 border-t pt-4">
-            <div className="text-center text-sm text-muted-foreground">
-              <span className="text-gray-500">Don't have an account? </span>
-              <Link to="/register" className="text-blue-600 hover:underline">
-                Create an account
-              </Link>
+            <div className="text-center text-xs text-gray-500">
+              <p className="my-2">For demo purposes, use: admin@example.com / password123</p>
+              <p className="text-xs text-gray-400 mt-4">
+                Need an account?{" "}
+                <Link to="/register" className="text-blue-600 hover:underline text-xs opacity-70">
+                  Create an account
+                </Link>
+              </p>
             </div>
-            <p className="text-center text-xs text-gray-500">
-              For demo purposes, use: admin@example.com / password123
-            </p>
           </CardFooter>
         </Card>
       </div>
