@@ -12,6 +12,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/AuthContext";
 
 // Define the leave types according to the specification
 const leaveTypes = [
@@ -23,7 +26,7 @@ const leaveTypes = [
   { value: "holiday", label: "Public Holiday" },
 ];
 
-// Mock data for the demo
+// Initial timesheet entries state
 const initialTimeEntries: Record<string, { hours: number; leaveType: string; notes: string }> = {};
 
 const TimesheetCalendar = () => {
@@ -34,6 +37,9 @@ const TimesheetCalendar = () => {
   const [currentLeaveType, setCurrentLeaveType] = useState<string>("work");
   const [currentNotes, setCurrentNotes] = useState<string>("");
   const [activeTab, setActiveTab] = useState("entry");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+  const { session } = useAuth();
   
   // Format date key for timeEntries object
   const formatDateKey = (date: Date) => format(date, "yyyy-MM-dd");
@@ -45,23 +51,244 @@ const TimesheetCalendar = () => {
         end: endOfMonth(selectedDate),
       })
     : [];
+
+  // Load timesheet entries from Supabase when month changes
+  const loadTimeEntries = async () => {
+    if (!session?.user) return;
+    
+    try {
+      const year = month.getFullYear();
+      const monthNum = month.getMonth() + 1;
+      
+      // First check if there's a timesheet for this month
+      const { data: timesheetData, error: timesheetError } = await supabase
+        .from('timesheets')
+        .select('id')
+        .eq('employee_id', session.user.id)
+        .eq('year', year)
+        .eq('month', monthNum)
+        .maybeSingle();
+        
+      if (timesheetError) {
+        console.error("Error fetching timesheet:", timesheetError);
+        return;
+      }
+      
+      if (!timesheetData) {
+        // Create a new timesheet
+        const { data: newTimesheetData, error: newTimesheetError } = await supabase
+          .from('timesheets')
+          .insert({
+            employee_id: session.user.id,
+            year: year,
+            month: monthNum,
+            status: 'draft'
+          })
+          .select('id')
+          .single();
+          
+        if (newTimesheetError) {
+          console.error("Error creating timesheet:", newTimesheetError);
+          return;
+        }
+        
+        // Empty entries for a new timesheet
+        setTimeEntries({});
+        return;
+      }
+      
+      // Fetch entries for existing timesheet
+      const { data: entriesData, error: entriesError } = await supabase
+        .from('timesheet_entries')
+        .select('*')
+        .eq('timesheet_id', timesheetData.id);
+        
+      if (entriesError) {
+        console.error("Error fetching timesheet entries:", entriesError);
+        return;
+      }
+      
+      // Convert DB entries to our local format
+      const entries = entriesData.reduce((acc, entry) => {
+        const dateKey = format(new Date(entry.date), "yyyy-MM-dd");
+        acc[dateKey] = {
+          hours: entry.hours || 0,
+          leaveType: entry.leave_type || "work",
+          notes: entry.notes || "",
+        };
+        return acc;
+      }, {} as Record<string, { hours: number; leaveType: string; notes: string }>);
+      
+      setTimeEntries(entries);
+    } catch (error) {
+      console.error("Error loading timesheet data:", error);
+      toast({
+        variant: "destructive",
+        title: "Failed to load timesheet data",
+        description: "Please try again later."
+      });
+    }
+  };
   
-  // Save the current entry to the timeEntries state
-  const saveEntry = () => {
-    if (!selectedDate) return;
+  // Save the current entry to Supabase
+  const saveEntry = async () => {
+    if (!session?.user || !selectedDate) return;
     
-    const dateKey = formatDateKey(selectedDate);
-    setTimeEntries((prev) => ({
-      ...prev,
-      [dateKey]: {
-        hours: currentHours,
-        leaveType: currentLeaveType,
-        notes: currentNotes,
-      },
-    }));
+    try {
+      setIsSubmitting(true);
+      const year = selectedDate.getFullYear();
+      const monthNum = selectedDate.getMonth() + 1;
+      const dateKey = formatDateKey(selectedDate);
+      
+      // Get or create timesheet for this month
+      const { data: timesheetData, error: timesheetError } = await supabase
+        .from('timesheets')
+        .select('id')
+        .eq('employee_id', session.user.id)
+        .eq('year', year)
+        .eq('month', monthNum)
+        .maybeSingle();
+        
+      if (timesheetError) {
+        throw new Error("Error fetching timesheet: " + timesheetError.message);
+      }
+      
+      let timesheetId;
+      
+      if (!timesheetData) {
+        // Create a new timesheet
+        const { data: newTimesheet, error: createError } = await supabase
+          .from('timesheets')
+          .insert({
+            employee_id: session.user.id,
+            year: year,
+            month: monthNum,
+            status: 'draft'
+          })
+          .select('id')
+          .single();
+          
+        if (createError) {
+          throw new Error("Error creating timesheet: " + createError.message);
+        }
+        
+        timesheetId = newTimesheet.id;
+      } else {
+        timesheetId = timesheetData.id;
+      }
+      
+      // Check if entry exists
+      const { data: existingEntry, error: checkError } = await supabase
+        .from('timesheet_entries')
+        .select('id')
+        .eq('timesheet_id', timesheetId)
+        .eq('date', dateKey)
+        .maybeSingle();
+        
+      if (checkError) {
+        throw new Error("Error checking existing entry: " + checkError.message);
+      }
+      
+      if (existingEntry) {
+        // Update existing entry
+        const { error: updateError } = await supabase
+          .from('timesheet_entries')
+          .update({
+            hours: currentHours,
+            leave_type: currentLeaveType,
+            notes: currentNotes
+          })
+          .eq('id', existingEntry.id);
+          
+        if (updateError) {
+          throw new Error("Error updating entry: " + updateError.message);
+        }
+      } else {
+        // Insert new entry
+        const { error: insertError } = await supabase
+          .from('timesheet_entries')
+          .insert({
+            timesheet_id: timesheetId,
+            date: dateKey,
+            hours: currentHours,
+            leave_type: currentLeaveType,
+            notes: currentNotes
+          });
+          
+        if (insertError) {
+          throw new Error("Error inserting entry: " + insertError.message);
+        }
+      }
+      
+      // Update local state
+      setTimeEntries((prev) => ({
+        ...prev,
+        [dateKey]: {
+          hours: currentHours,
+          leaveType: currentLeaveType,
+          notes: currentNotes,
+        },
+      }));
+      
+      toast({
+        title: "Entry saved",
+        description: "Your timesheet entry has been saved.",
+      });
+      
+      // Reset notes after saving
+      setCurrentNotes("");
+      
+    } catch (error: any) {
+      console.error("Error saving entry:", error);
+      toast({
+        variant: "destructive",
+        title: "Failed to save entry",
+        description: error.message || "Please try again later."
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
+  // Submit the timesheet for approval
+  const submitTimesheet = async () => {
+    if (!session?.user) return;
     
-    // Reset notes after saving
-    setCurrentNotes("");
+    try {
+      setIsSubmitting(true);
+      const year = month.getFullYear();
+      const monthNum = month.getMonth() + 1;
+      
+      // Update timesheet status
+      const { error } = await supabase
+        .from('timesheets')
+        .update({
+          status: 'pending',
+          submitted_at: new Date().toISOString()
+        })
+        .eq('employee_id', session.user.id)
+        .eq('year', year)
+        .eq('month', monthNum);
+        
+      if (error) {
+        throw new Error("Error submitting timesheet: " + error.message);
+      }
+      
+      toast({
+        title: "Timesheet submitted",
+        description: "Your timesheet has been submitted for approval.",
+      });
+      
+    } catch (error: any) {
+      console.error("Error submitting timesheet:", error);
+      toast({
+        variant: "destructive",
+        title: "Failed to submit timesheet",
+        description: error.message || "Please try again later."
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   
   // Calculate total hours for the current month
@@ -102,11 +329,11 @@ const TimesheetCalendar = () => {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2">
-          <CardHeader className="pb-2">
-            <CardTitle>Monthly Timesheet</CardTitle>
+        <Card className="lg:col-span-2 border-none shadow-md">
+          <CardHeader className="pb-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-lg">
+            <CardTitle className="text-xl font-bold text-blue-800">Monthly Timesheet</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-6">
             <div className="flex flex-col lg:flex-row gap-6">
               <div className="flex-1">
                 <Calendar
@@ -114,8 +341,11 @@ const TimesheetCalendar = () => {
                   selected={selectedDate}
                   onSelect={setSelectedDate}
                   month={month}
-                  onMonthChange={setMonth}
-                  className="p-3 pointer-events-auto border rounded-md"
+                  onMonthChange={(newMonth) => {
+                    setMonth(newMonth);
+                    loadTimeEntries();
+                  }}
+                  className="p-3 pointer-events-auto border rounded-md shadow-sm"
                   modifiersClassNames={{
                     selected: "bg-primary text-primary-foreground",
                   }}
@@ -163,7 +393,7 @@ const TimesheetCalendar = () => {
                                 value={currentLeaveType}
                                 onValueChange={setCurrentLeaveType}
                               >
-                                <SelectTrigger>
+                                <SelectTrigger className="border-blue-200 focus:ring-blue-500">
                                   <SelectValue placeholder="Select type" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -185,7 +415,7 @@ const TimesheetCalendar = () => {
                                 min="0"
                                 max="24"
                                 step="0.5"
-                                className="w-full mt-1 px-3 py-2 border rounded-md"
+                                className="w-full mt-1 px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                               />
                             </div>
                             
@@ -194,13 +424,17 @@ const TimesheetCalendar = () => {
                               <textarea
                                 value={currentNotes}
                                 onChange={(e) => setCurrentNotes(e.target.value)}
-                                className="w-full mt-1 px-3 py-2 border rounded-md"
+                                className="w-full mt-1 px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 rows={3}
                               />
                             </div>
                             
-                            <Button onClick={saveEntry} className="w-full">
-                              Save Entry
+                            <Button 
+                              onClick={saveEntry}
+                              disabled={isSubmitting}
+                              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                            >
+                              {isSubmitting ? "Saving..." : "Save Entry"}
                             </Button>
                           </div>
                         </div>
@@ -219,7 +453,7 @@ const TimesheetCalendar = () => {
                           {format(month, "MMMM yyyy")}
                         </h3>
                         <div className="grid grid-cols-1 gap-2">
-                          <div className="flex justify-between p-2 bg-gray-50 rounded-md">
+                          <div className="flex justify-between p-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-md">
                             <span>Total Hours Logged:</span>
                             <span className="font-medium">{totalHours} hrs</span>
                           </div>
@@ -235,8 +469,13 @@ const TimesheetCalendar = () => {
                         </div>
                       </div>
                       
-                      <Button variant="outline" className="w-full">
-                        Submit Monthly Timesheet
+                      <Button 
+                        onClick={submitTimesheet}
+                        disabled={isSubmitting}
+                        variant="outline"
+                        className="w-full border-blue-300 text-blue-700 hover:bg-blue-50"
+                      >
+                        {isSubmitting ? "Submitting..." : "Submit Monthly Timesheet"}
                       </Button>
                     </div>
                   </TabsContent>
@@ -246,13 +485,13 @@ const TimesheetCalendar = () => {
           </CardContent>
         </Card>
         
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle>Monthly Status</CardTitle>
+        <Card className="border-none shadow-md">
+          <CardHeader className="pb-2 bg-gradient-to-r from-purple-50 to-pink-50 rounded-t-lg">
+            <CardTitle className="text-xl font-bold text-purple-800">Monthly Status</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="p-4 border rounded-md bg-yellow-50 text-yellow-800">
+              <div className="p-4 border rounded-md bg-yellow-50 text-yellow-800 shadow-sm">
                 <h3 className="font-medium mb-2">Pending Submission</h3>
                 <p className="text-sm">
                   Your timesheet for {format(month, "MMMM yyyy")} needs to be submitted by the end of the month.
@@ -281,11 +520,11 @@ const TimesheetCalendar = () => {
               <div>
                 <h3 className="font-medium mb-2">Previous Submissions</h3>
                 <div className="space-y-2">
-                  <div className="p-2 border rounded-md flex items-center justify-between">
+                  <div className="p-2 border rounded-md flex items-center justify-between shadow-sm hover:bg-gray-50">
                     <span className="text-sm">April 2025</span>
                     <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded">Approved</span>
                   </div>
-                  <div className="p-2 border rounded-md flex items-center justify-between">
+                  <div className="p-2 border rounded-md flex items-center justify-between shadow-sm hover:bg-gray-50">
                     <span className="text-sm">March 2025</span>
                     <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded">Approved</span>
                   </div>

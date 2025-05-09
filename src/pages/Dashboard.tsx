@@ -36,17 +36,74 @@ const Dashboard = () => {
       try {
         setLoading(true);
         
-        // For simplicity in this demo, we're setting mock data
-        // In a real app, this would fetch from Supabase
-        setTimeout(() => {
-          setStats({
-            employeeCount: 42,
-            pendingApprovals: 12,
-            documentsUploaded: 156,
-            timesheets: 38
-          });
-          setLoading(false);
-        }, 800);
+        // Fetch real stats from Supabase
+        const promises = [];
+        
+        // Employee count
+        if (profile?.role === "admin" || profile?.role === "hr") {
+          promises.push(
+            supabase.from('employees')
+              .select('id', { count: 'exact', head: true })
+              .then(({ count, error }) => {
+                if (error) throw error;
+                return { employeeCount: count || 0 };
+              })
+          );
+          
+          // Pending approvals
+          promises.push(
+            supabase.from('timesheets')
+              .select('id', { count: 'exact', head: true })
+              .eq('status', 'pending')
+              .then(({ count, error }) => {
+                if (error) throw error;
+                return { pendingApprovals: count || 0 };
+              })
+          );
+        }
+        
+        // Documents uploaded
+        promises.push(
+          supabase.from('documents')
+            .select('id', { count: 'exact', head: true })
+            .eq('employee_id', user.id)
+            .then(({ count, error }) => {
+              if (error) throw error;
+              return { documentsUploaded: count || 0 };
+            })
+        );
+        
+        // Current month's timesheets
+        const currentDate = new Date();
+        const currentYear = currentDate.getFullYear();
+        const currentMonth = currentDate.getMonth() + 1;
+        
+        promises.push(
+          supabase.from('timesheets')
+            .select('id', { count: 'exact', head: true })
+            .eq('year', currentYear)
+            .eq('month', currentMonth)
+            .then(({ count, error }) => {
+              if (error) throw error;
+              return { timesheets: count || 0 };
+            })
+        );
+        
+        // Process all promises
+        const results = await Promise.all(promises);
+        
+        // Combine results
+        const newStats = results.reduce((acc, result) => ({ ...acc, ...result }), {} as DashboardStats);
+        
+        // Set default values for any missing properties
+        setStats({
+          employeeCount: newStats.employeeCount || 0,
+          pendingApprovals: newStats.pendingApprovals || 0,
+          documentsUploaded: newStats.documentsUploaded || 0,
+          timesheets: newStats.timesheets || 0
+        });
+        
+        setLoading(false);
         
         // Create a welcome notification for demo purposes
         if (user) {
@@ -72,19 +129,20 @@ const Dashboard = () => {
           title: "Error",
           description: "Could not load dashboard data",
         });
+        setLoading(false);
       }
     };
 
     fetchDashboardData();
-  }, [user]);
+  }, [user, profile, toast]);
 
   const isAdminOrHR = profile?.role === "admin" || profile?.role === "hr";
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-        <p className="text-muted-foreground">
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg shadow-sm">
+        <h2 className="text-3xl font-bold tracking-tight text-blue-800">Dashboard</h2>
+        <p className="text-blue-600">
           Welcome back, {profile?.first_name || profile?.role}
         </p>
       </div>

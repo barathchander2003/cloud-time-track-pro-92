@@ -1,15 +1,13 @@
-
-import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
-import NewEmployeeForm from "@/components/employees/NewEmployeeForm";
+import NewEmployeeForm from "./NewEmployeeForm";
 
 interface EmployeeHeaderProps {
   newEmployeeOpen: boolean;
@@ -18,28 +16,29 @@ interface EmployeeHeaderProps {
 
 const EmployeeHeader = ({ newEmployeeOpen, setNewEmployeeOpen }: EmployeeHeaderProps) => {
   return (
-    <div className="flex justify-between items-center">
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg shadow-sm">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight">Employees</h2>
-        <p className="text-muted-foreground">
-          Manage employee profiles and information
+        <h2 className="text-3xl font-bold tracking-tight text-blue-800">Employees</h2>
+        <p className="text-blue-600">
+          Manage your organization's workforce
         </p>
       </div>
+      <Button 
+        onClick={() => setNewEmployeeOpen(true)}
+        className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+      >
+        <Plus className="mr-2 h-4 w-4" /> Add Employee
+      </Button>
+      
       <Dialog open={newEmployeeOpen} onOpenChange={setNewEmployeeOpen}>
-        <DialogTrigger asChild>
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Employee
-          </Button>
-        </DialogTrigger>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Add New Employee</DialogTitle>
+            <DialogTitle className="text-xl text-blue-800">Add New Employee</DialogTitle>
             <DialogDescription>
-              Complete the form to add a new employee to the system
+              Fill in the details below to add a new employee to your organization.
             </DialogDescription>
           </DialogHeader>
-          <NewEmployeeForm />
+          <NewEmployeeForm onClose={() => setNewEmployeeOpen(false)} />
         </DialogContent>
       </Dialog>
     </div>

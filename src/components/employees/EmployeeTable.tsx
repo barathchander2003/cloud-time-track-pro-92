@@ -1,109 +1,205 @@
-
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { Calendar, ChevronDown, Edit, Trash, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { User } from "lucide-react";
-import { Employee } from "@/types/employee";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { format } from "date-fns";
 
 interface EmployeeTableProps {
   employees: Employee[];
 }
 
 const EmployeeTable = ({ employees }: EmployeeTableProps) => {
-  if (employees.length === 0) {
-    return (
-      <div className="border rounded-md">
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const handleEdit = (employee) => {
+    // In a real app, this would navigate to an edit form
+    console.log("Edit employee:", employee);
+    toast({
+      title: "Edit Employee",
+      description: "This feature is coming soon.",
+    });
+  };
+
+  const handleDelete = async () => {
+    if (!selectedEmployee) return;
+    
+    try {
+      // Delete employee from Supabase
+      const { error } = await supabase
+        .from('employees')
+        .delete()
+        .eq('id', selectedEmployee.id);
+        
+      if (error) throw new Error(error.message);
+      
+      toast({
+        title: "Employee deleted",
+        description: `${selectedEmployee.first_name} ${selectedEmployee.last_name} has been removed.`,
+      });
+      
+      // Refresh page to update list
+      window.location.reload();
+      
+    } catch (error) {
+      console.error("Error deleting employee:", error);
+      toast({
+        variant: "destructive",
+        title: "Delete failed",
+        description: "There was an error removing the employee."
+      });
+    } finally {
+      setConfirmDelete(false);
+      setSelectedEmployee(null);
+    }
+  };
+
+  const confirmDeleteEmployee = (employee) => {
+    setSelectedEmployee(employee);
+    setConfirmDelete(true);
+  };
+
+  const formatSalary = (employee) => {
+    if (!employee.salaries || employee.salaries.length === 0) {
+      return "Not set";
+    }
+    
+    // Get the most recent salary
+    const salary = employee.salaries[0];
+    return `${salary.amount} ${salary.currency} ${salary.salary_type === 'hourly' ? '/ hour' : salary.salary_type === 'daily' ? '/ day' : '/ month'}`;
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
+    return format(new Date(dateString), "MMM dd, yyyy");
+  };
+
+  return (
+    <>
+      <div className="rounded-lg border border-gray-100 shadow-sm bg-white overflow-hidden">
         <Table>
-          <TableHeader>
+          <TableCaption>List of all employees</TableCaption>
+          <TableHeader className="bg-gradient-to-r from-slate-50 to-blue-50">
             <TableRow>
-              <TableHead>Employee</TableHead>
-              <TableHead>ID</TableHead>
-              <TableHead>Job Title</TableHead>
-              <TableHead>Organization</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead className="font-bold text-blue-900">Name</TableHead>
+              <TableHead className="font-bold text-blue-900">Position</TableHead>
+              <TableHead className="font-bold text-blue-900">Status</TableHead>
+              <TableHead className="font-bold text-blue-900">Start Date</TableHead>
+              <TableHead className="font-bold text-blue-900">Salary</TableHead>
+              <TableHead className="font-bold text-blue-900 text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            <TableRow>
-              <TableCell colSpan={6} className="text-center py-8">
-                <div className="flex flex-col items-center justify-center">
-                  <User className="h-10 w-10 text-muted-foreground mb-2" />
-                  <p className="text-muted-foreground">No employees found</p>
-                  <p className="text-sm text-muted-foreground">
-                    Try adjusting your search or add a new employee
-                  </p>
-                </div>
-              </TableCell>
-            </TableRow>
+            {employees.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                  No employees found
+                </TableCell>
+              </TableRow>
+            ) : (
+              employees.map((employee) => (
+                <TableRow key={employee.id} className="hover:bg-blue-50/30">
+                  <TableCell className="font-medium">
+                    {employee.first_name} {employee.last_name}
+                  </TableCell>
+                  <TableCell>{employee.role || "N/A"}</TableCell>
+                  <TableCell>
+                    <Badge variant={employee.employment_type === "fixed" ? "outline" : "secondary"}>
+                      {employee.employment_type === "fixed" ? "Full-time" : "Contractor"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center">
+                      <Calendar className="mr-2 h-4 w-4 text-blue-600" />
+                      {formatDate(employee.start_date)}
+                    </div>
+                  </TableCell>
+                  <TableCell>{formatSalary(employee)}</TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          <span className="sr-only">Open menu</span>
+                          Actions <ChevronDown className="ml-1 h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-[160px]">
+                        <DropdownMenuLabel>Options</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleEdit(employee)} className="cursor-pointer">
+                          <Edit className="mr-2 h-4 w-4" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => confirmDeleteEmployee(employee)} className="cursor-pointer text-red-600">
+                          <Trash className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="cursor-pointer">
+                          <FileText className="mr-2 h-4 w-4" />
+                          View Documents
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </div>
-    );
-  }
 
-  return (
-    <div className="border rounded-md">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Employee</TableHead>
-            <TableHead>ID</TableHead>
-            <TableHead>Job Title</TableHead>
-            <TableHead>Organization</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead>Status</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {employees.map((employee) => (
-            <TableRow key={employee.id}>
-              <TableCell>
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-brand-100 text-brand-600">
-                      {employee.initials}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium">
-                      {employee.firstName} {employee.lastName}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {employee.email}
-                    </p>
-                  </div>
-                </div>
-              </TableCell>
-              <TableCell>{employee.id}</TableCell>
-              <TableCell>{employee.jobTitle}</TableCell>
-              <TableCell>
-                <div className="max-w-[300px] truncate">
-                  {employee.organization}
-                </div>
-              </TableCell>
-              <TableCell>
-                <Badge variant="outline">
-                  {employee.employmentType === "full-time" ? "Full Time" : "Contractor"}
-                </Badge>
-              </TableCell>
-              <TableCell>
-                <Badge
-                  variant="outline" 
-                  className={`
-                    ${employee.status === "active" 
-                      ? "bg-green-50 text-green-700 border-green-200" 
-                      : "bg-red-50 text-red-700 border-red-200"}
-                  `}
-                >
-                  {employee.status === "active" ? "Active" : "Inactive"}
-                </Badge>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+      <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Are you sure?</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete{" "}
+              {selectedEmployee && `${selectedEmployee.first_name} ${selectedEmployee.last_name}`}'s
+              account and all associated data.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDelete(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDelete}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 

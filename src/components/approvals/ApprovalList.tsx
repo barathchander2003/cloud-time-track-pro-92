@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Card, 
   CardContent, 
@@ -20,6 +20,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { format } from "date-fns";
 
 interface Approval {
   id: string;
@@ -34,62 +38,124 @@ interface Approval {
   status: "pending" | "approved" | "rejected";
 }
 
-const initialApprovals: Approval[] = [
-  {
-    id: "1",
-    employeeName: "Sarah Johnson",
-    employeeId: "EMP001",
-    type: "timesheet",
-    submissionDate: new Date("2025-04-29T14:30:00"),
-    period: "April 2025",
-    status: "pending"
-  },
-  {
-    id: "2",
-    employeeName: "Michael Chen",
-    employeeId: "EMP002",
-    type: "timesheet",
-    submissionDate: new Date("2025-04-28T09:15:00"),
-    period: "April 2025",
-    status: "pending"
-  },
-  {
-    id: "3",
-    employeeName: "Jessica Williams",
-    employeeId: "EMP003",
-    type: "leave",
-    submissionDate: new Date("2025-04-27T16:45:00"),
-    leaveType: "Annual Leave",
-    leaveDate: "May 10-15, 2025",
-    status: "pending"
-  },
-  {
-    id: "4",
-    employeeName: "David Rodriguez",
-    employeeId: "EMP004",
-    type: "document",
-    submissionDate: new Date("2025-04-26T11:20:00"),
-    documentName: "Medical Certificate.pdf",
-    status: "pending"
-  },
-  {
-    id: "5",
-    employeeName: "Emily Davis",
-    employeeId: "EMP005",
-    type: "timesheet",
-    submissionDate: new Date("2025-04-25T13:40:00"),
-    period: "April 2025",
-    status: "pending"
-  }
-];
+interface TimesheetApproval {
+  id: string;
+  employee_id: string;
+  year: number;
+  month: number;
+  status: string;
+  submitted_at: string;
+  first_name?: string;
+  last_name?: string;
+  employee_number?: string;
+}
 
 const ApprovalList = () => {
   const { toast } = useToast();
-  const [approvals, setApprovals] = useState<Approval[]>(initialApprovals);
+  const { session, profile } = useAuth();
+  const [approvals, setApprovals] = useState<Approval[]>([]);
+  const [history, setHistory] = useState<Approval[]>([]);
   const [selectedApproval, setSelectedApproval] = useState<Approval | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [approvalAction, setApprovalAction] = useState<"approve" | "reject" | null>(null);
   const [comment, setComment] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("pending");
+  const [historyVisible, setHistoryVisible] = useState(false);
+  
+  // Fetch approvals from Supabase
+  useEffect(() => {
+    if (!session?.user) return;
+    
+    const fetchApprovals = async () => {
+      try {
+        setLoading(true);
+        
+        // For HR and admin roles, fetch all pending timesheets
+        if (profile?.role === "admin" || profile?.role === "hr") {
+          const { data: timesheets, error } = await supabase
+            .from('timesheets')
+            .select(`
+              id, 
+              employee_id, 
+              year, 
+              month, 
+              status, 
+              submitted_at,
+              employees!timesheet_employee_fkey (
+                first_name,
+                last_name,
+                employee_number
+              )
+            `)
+            .eq('status', 'pending');
+          
+          if (error) {
+            console.error("Error fetching approvals:", error);
+            throw new Error(error.message);
+          }
+          
+          // Transform data to match Approval interface
+          const transformedApprovals: Approval[] = timesheets.map((ts: any) => ({
+            id: ts.id,
+            employeeName: `${ts.employees?.first_name || 'Unknown'} ${ts.employees?.last_name || 'User'}`,
+            employeeId: ts.employees?.employee_number || ts.employee_id,
+            type: "timesheet",
+            submissionDate: new Date(ts.submitted_at),
+            period: `${getMonthName(ts.month)} ${ts.year}`,
+            status: ts.status,
+          }));
+          
+          setApprovals(transformedApprovals);
+        }
+        
+        // Fetch approval history
+        const { data: historyData, error: historyError } = await supabase
+          .from('timesheets')
+          .select(`
+            id, 
+            employee_id, 
+            year, 
+            month, 
+            status, 
+            submitted_at,
+            employees!timesheet_employee_fkey (
+              first_name,
+              last_name,
+              employee_number
+            )
+          `)
+          .in('status', ['approved', 'rejected']);
+          
+        if (historyError) {
+          console.error("Error fetching approval history:", historyError);
+        } else if (historyData) {
+          const transformedHistory: Approval[] = historyData.map((ts: any) => ({
+            id: ts.id,
+            employeeName: `${ts.employees?.first_name || 'Unknown'} ${ts.employees?.last_name || 'User'}`,
+            employeeId: ts.employees?.employee_number || ts.employee_id,
+            type: "timesheet",
+            submissionDate: new Date(ts.submitted_at),
+            period: `${getMonthName(ts.month)} ${ts.year}`,
+            status: ts.status,
+          }));
+          
+          setHistory(transformedHistory);
+        }
+      } catch (error) {
+        console.error("Failed to fetch approvals:", error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to load approval requests",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchApprovals();
+  }, [session, profile, toast]);
 
   const handleApprove = (approval: Approval) => {
     setSelectedApproval(approval);
@@ -105,25 +171,64 @@ const ApprovalList = () => {
     setDialogOpen(true);
   };
 
-  const confirmAction = () => {
-    if (!selectedApproval || !approvalAction) return;
+  const confirmAction = async () => {
+    if (!selectedApproval || !approvalAction || !session?.user) return;
     
-    const newStatus = approvalAction === "approve" ? "approved" : "rejected";
-    
-    setApprovals(
-      approvals.map(a => 
-        a.id === selectedApproval.id 
-          ? { ...a, status: newStatus as "approved" | "rejected" } 
-          : a
-      )
-    );
-    
-    toast({
-      title: `${approvalAction === "approve" ? "Approved" : "Rejected"}`,
-      description: `You have ${approvalAction === "approve" ? "approved" : "rejected"} ${selectedApproval.employeeName}'s ${selectedApproval.type}.`,
-    });
-    
-    setDialogOpen(false);
+    try {
+      const newStatus = approvalAction === "approve" ? "approved" : "rejected";
+      
+      // Update the timesheet status in Supabase
+      const { error } = await supabase
+        .from('timesheets')
+        .update({
+          status: newStatus,
+          approved_by: session.user.id,
+          approved_at: new Date().toISOString(),
+          rejection_reason: approvalAction === "reject" ? comment : null
+        })
+        .eq('id', selectedApproval.id);
+        
+      if (error) {
+        throw new Error(error.message);
+      }
+      
+      // Create a notification for the employee
+      const { error: notifError } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: selectedApproval.employeeId,
+          title: `Timesheet ${approvalAction === "approve" ? "Approved" : "Rejected"}`,
+          message: `Your timesheet for ${selectedApproval.period} has been ${approvalAction === "approve" ? "approved" : "rejected"}${approvalAction === "reject" ? ": " + comment : ""}`,
+          read: false
+        });
+        
+      if (notifError) {
+        console.error("Error creating notification:", notifError);
+      }
+      
+      // Update UI
+      setApprovals(prev => prev.filter(a => a.id !== selectedApproval.id));
+      setHistory(prev => [...prev, {...selectedApproval, status: newStatus as "approved" | "rejected"}]);
+      
+      toast({
+        title: `${approvalAction === "approve" ? "Approved" : "Rejected"}`,
+        description: `You have ${approvalAction === "approve" ? "approved" : "rejected"} ${selectedApproval.employeeName}'s ${selectedApproval.type}.`,
+      });
+      
+      setDialogOpen(false);
+    } catch (error: any) {
+      console.error("Approval action error:", error);
+      toast({
+        variant: "destructive",
+        title: "Action failed",
+        description: error.message || "There was an error processing your request",
+      });
+    }
+  };
+
+  const getMonthName = (monthNumber: number): string => {
+    const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    return months[monthNumber - 1];
   };
 
   const getApprovalDetails = (approval: Approval) => {
@@ -161,81 +266,137 @@ const ApprovalList = () => {
     }).format(date);
   };
 
+  const toggleHistory = () => {
+    setHistoryVisible(!historyVisible);
+  };
+
   return (
     <>
-      <Card>
-        <CardHeader>
-          <CardTitle>Approval Requests</CardTitle>
+      <Card className="border-none shadow-md">
+        <CardHeader className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-t-lg">
+          <CardTitle className="text-xl font-bold text-purple-800">Approval Requests</CardTitle>
           <CardDescription>
             Manage employee timesheet, leave, and document submissions
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {approvals.map((approval) => (
-              <div 
-                key={approval.id} 
-                className="border rounded-lg p-4"
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-medium">{approval.employeeName}</h3>
-                      <span className="text-xs text-muted-foreground">
-                        ({approval.employeeId})
-                      </span>
-                    </div>
-                    <p className="text-sm">{getApprovalDetails(approval)}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Submitted on {formatDate(approval.submissionDate)}
-                    </p>
-                  </div>
-                  <div className="flex flex-col items-end gap-2">
-                    {getStatusBadge(approval.status)}
-                    
-                    {approval.status === "pending" && (
-                      <div className="flex gap-2 mt-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="text-red-600 hover:text-red-700"
-                          onClick={() => handleReject(approval)}
-                        >
-                          Reject
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          className="bg-brand-600 hover:bg-brand-700"
-                          onClick={() => handleApprove(approval)}
-                        >
-                          Approve
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
+        <CardContent className="pt-6">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="mb-4 bg-gray-100">
+              <TabsTrigger value="pending" className="data-[state=active]:bg-white">Pending</TabsTrigger>
+              <TabsTrigger value="history" className="data-[state=active]:bg-white">History</TabsTrigger>
+            </TabsList>
             
-            {approvals.length === 0 && (
-              <div className="text-center py-6">
-                <p className="text-muted-foreground">No pending approvals at this time</p>
-              </div>
-            )}
-          </div>
+            <TabsContent value="pending" className="space-y-4">
+              {loading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-700 mx-auto"></div>
+                  <p className="mt-2 text-muted-foreground">Loading approvals...</p>
+                </div>
+              ) : (
+                <>
+                  {approvals.map((approval) => (
+                    <div 
+                      key={approval.id} 
+                      className="border rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-medium">{approval.employeeName}</h3>
+                            <span className="text-xs text-muted-foreground">
+                              ({approval.employeeId})
+                            </span>
+                          </div>
+                          <p className="text-sm">{getApprovalDetails(approval)}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Submitted on {formatDate(approval.submissionDate)}
+                          </p>
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          {getStatusBadge(approval.status)}
+                          
+                          {approval.status === "pending" && (
+                            <div className="flex gap-2 mt-2">
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="text-red-600 hover:text-red-700 border-red-200 hover:bg-red-50"
+                                onClick={() => handleReject(approval)}
+                              >
+                                Reject
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                className="bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700"
+                                onClick={() => handleApprove(approval)}
+                              >
+                                Approve
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {approvals.length === 0 && (
+                    <div className="text-center py-8 bg-gray-50 rounded-lg">
+                      <p className="text-muted-foreground">No pending approvals at this time</p>
+                    </div>
+                  )}
+                </>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="history" className="space-y-4">
+              {loading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-700 mx-auto"></div>
+                  <p className="mt-2 text-muted-foreground">Loading history...</p>
+                </div>
+              ) : (
+                <>
+                  {history.map((item) => (
+                    <div 
+                      key={item.id} 
+                      className="border rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-medium">{item.employeeName}</h3>
+                            <span className="text-xs text-muted-foreground">
+                              ({item.employeeId})
+                            </span>
+                          </div>
+                          <p className="text-sm">{getApprovalDetails(item)}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Submitted on {formatDate(item.submissionDate)}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {getStatusBadge(item.status)}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {history.length === 0 && (
+                    <div className="text-center py-8 bg-gray-50 rounded-lg">
+                      <p className="text-muted-foreground">No approval history found</p>
+                    </div>
+                  )}
+                </>
+              )}
+            </TabsContent>
+          </Tabs>
         </CardContent>
-        <CardFooter className="flex justify-between">
-          <p className="text-sm text-muted-foreground">
-            Showing {approvals.length} approval request{approvals.length !== 1 ? 's' : ''}
-          </p>
-          <Button variant="outline">View History</Button>
-        </CardFooter>
       </Card>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className={approvalAction === "approve" ? "text-green-700" : "text-red-700"}>
               {approvalAction === "approve" ? "Approve" : "Reject"} Submission
             </DialogTitle>
             <DialogDescription>
@@ -246,7 +407,7 @@ const ApprovalList = () => {
           </DialogHeader>
           
           {selectedApproval && (
-            <div className="py-3">
+            <div className="py-3 border-y">
               <p><strong>Employee:</strong> {selectedApproval.employeeName}</p>
               <p><strong>Request:</strong> {getApprovalDetails(selectedApproval)}</p>
             </div>
@@ -262,17 +423,21 @@ const ApprovalList = () => {
               }
               value={comment}
               onChange={(e) => setComment(e.target.value)}
+              className="border-slate-200 focus:border-blue-400 focus:ring-blue-400"
             />
           </div>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setDialogOpen(false)} className="border-slate-200">
               Cancel
             </Button>
             <Button
               onClick={confirmAction}
               variant={approvalAction === "approve" ? "default" : "destructive"}
               disabled={approvalAction === "reject" && comment.trim() === ""}
+              className={approvalAction === "approve" ? 
+                "bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700" : 
+                undefined}
             >
               {approvalAction === "approve" ? "Approve" : "Reject"}
             </Button>
