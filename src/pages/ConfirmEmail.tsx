@@ -29,6 +29,8 @@ const ConfirmEmail = () => {
           return;
         }
 
+        console.log("Confirming email with token:", token, "type:", type);
+
         // Verify the token
         const { error } = await supabase.auth.verifyOtp({
           token_hash: token,

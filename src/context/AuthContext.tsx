@@ -94,16 +94,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
         console.log("Auth state changed:", event, currentSession ? "session exists" : "no session");
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
         
-        if (currentSession?.user) {
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          setSession(currentSession);
+          setUser(currentSession?.user ?? null);
+          
           // Fetch user profile separately to avoid auth deadlock
-          setTimeout(async () => {
-            const userProfile = await fetchProfile(currentSession.user.id);
-            setProfile(userProfile);
-          }, 0);
-        } else {
+          if (currentSession?.user) {
+            setTimeout(async () => {
+              const userProfile = await fetchProfile(currentSession.user.id);
+              setProfile(userProfile);
+            }, 0);
+          }
+        } 
+        else if (event === 'SIGNED_OUT') {
+          setSession(null);
+          setUser(null);
           setProfile(null);
         }
         

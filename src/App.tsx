@@ -48,7 +48,16 @@ const ProtectedRoute = ({ allowedRoles }: { allowedRoles?: string[] }) => {
     return <Navigate to="/dashboard" replace />;
   }
   
-  return <Layout><Outlet /></Layout>;
+  return <Outlet />;
+};
+
+// Layout wrapper for protected routes
+const ProtectedLayout = () => {
+  return (
+    <Layout>
+      <Outlet />
+    </Layout>
+  );
 };
 
 // Employee route - only for employee/user role
@@ -68,7 +77,16 @@ const EmployeeRoute = () => {
     return <Navigate to="/dashboard" replace />;
   }
   
-  return <EmployeeLayout><Outlet /></EmployeeLayout>;
+  return <Outlet />;
+};
+
+// Employee layout wrapper
+const EmployeeLayoutWrapper = () => {
+  return (
+    <EmployeeLayout>
+      <Outlet />
+    </EmployeeLayout>
+  );
 };
 
 // Route wrapper for the AuthProvider
@@ -84,29 +102,37 @@ const AppRoutes = () => {
       
       {/* Employee routes */}
       <Route element={<EmployeeRoute />}>
-        <Route path="/employee" element={<EmployeeDashboard />} />
-        <Route path="/employee/timesheet" element={<Timesheets />} />
-        <Route path="/employee/leave" element={<Approvals />} />
-        <Route path="/employee/documents" element={<Documents />} />
+        <Route element={<EmployeeLayoutWrapper />}>
+          <Route path="/employee" element={<EmployeeDashboard />} />
+          <Route path="/employee/timesheet" element={<Timesheets />} />
+          <Route path="/employee/leave" element={<Approvals />} />
+          <Route path="/employee/documents" element={<Documents />} />
+        </Route>
       </Route>
       
       {/* Protected routes */}
       <Route element={<ProtectedRoute />}>
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/timesheets" element={<Timesheets />} />
-        <Route path="/approvals" element={<Approvals />} />
+        <Route element={<ProtectedLayout />}>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/timesheets" element={<Timesheets />} />
+          <Route path="/approvals" element={<Approvals />} />
+        </Route>
       </Route>
       
       {/* Admin/HR only routes */}
       <Route element={<ProtectedRoute allowedRoles={["admin", "hr"]} />}>
-        <Route path="/employees" element={<Employees />} />
-        <Route path="/documents" element={<Documents />} />
-        <Route path="/reports" element={<Reports />} />
+        <Route element={<ProtectedLayout />}>
+          <Route path="/employees" element={<Employees />} />
+          <Route path="/documents" element={<Documents />} />
+          <Route path="/reports" element={<Reports />} />
+        </Route>
       </Route>
       
       {/* Admin only routes */}
       <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
-        <Route path="/settings" element={<Settings />} />
+        <Route element={<ProtectedLayout />}>
+          <Route path="/settings" element={<Settings />} />
+        </Route>
       </Route>
       
       {/* Catch-all route */}
