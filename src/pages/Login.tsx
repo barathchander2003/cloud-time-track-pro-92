@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Navigate, Link, useLocation } from "react-router-dom";
+import { Navigate, Link, useNavigate } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Clock, ArrowRight, Loader2, Save } from "lucide-react";
+import { Clock, ArrowRight, Loader2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -39,7 +39,7 @@ const Login = () => {
   const [savedCredentials, setSavedCredentials] = useState<SavedCredentials[]>([]);
   const { toast } = useToast();
   const { session, isLoading, signIn } = useAuth();
-  const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Load saved credentials from localStorage
@@ -51,13 +51,13 @@ const Login = () => {
         console.error("Could not parse saved credentials");
       }
     }
-  }, [location]);
+  }, []);
 
   const form = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: "admin@example.com",
-      password: "password123",
+      email: "",
+      password: "",
       remember: true,
     },
   });
@@ -130,94 +130,14 @@ const Login = () => {
       setLoading(false);
     }
   };
-
-  const handleDemoLogin = () => {
-    setLoading(true);
-    
-    // Create fixed demo credentials
-    const demoCredentials = {
-      email: "admin@example.com",
-      password: "password123"
-    };
-    
-    form.setValue("email", demoCredentials.email);
-    form.setValue("password", demoCredentials.password);
-    
-    // Use the signIn function directly from AuthContext
-    signIn(demoCredentials.email, demoCredentials.password)
-      .then(({ data: sessionData, error }) => {
-        if (error) {
-          console.error("Demo login failed:", error);
-          toast({
-            variant: "destructive", 
-            title: "Demo login failed",
-            description: error.message || "Could not log in with demo credentials."
-          });
-        } else if (sessionData) {
-          // Save demo credentials if remember is checked
-          if (form.getValues("remember")) {
-            const newCredential = { 
-              email: demoCredentials.email, 
-              password: demoCredentials.password 
-            };
-            const updatedCredentials = [...savedCredentials.filter(
-              cred => cred.email !== demoCredentials.email
-            ), newCredential];
-            localStorage.setItem('savedCredentials', JSON.stringify(updatedCredentials));
-          }
-          
-          toast({
-            title: "Demo login successful",
-            description: "Welcome to TimeTrack HR system."
-          });
-        }
-      })
-      .catch(error => {
-        console.error("Unexpected demo login error:", error);
-        toast({
-          variant: "destructive",
-          title: "Demo login failed",
-          description: "An unexpected error occurred."
-        });
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  };
   
   const useSavedCredential = (cred: SavedCredentials) => {
     form.setValue("email", cred.email);
     form.setValue("password", cred.password);
     setEmailInput(cred.email);
     
-    // Use signIn directly to prevent errors
-    setLoading(true);
-    signIn(cred.email, cred.password)
-      .then(({ data: sessionData, error }) => {
-        if (error) {
-          toast({
-            variant: "destructive",
-            title: "Login failed",
-            description: error.message || "Invalid email or password.",
-          });
-        } else if (sessionData) {
-          toast({
-            title: "Login successful",
-            description: "Welcome to TimeTrack HR system.",
-          });
-        }
-      })
-      .catch(error => {
-        console.error("Login error:", error);
-        toast({
-          variant: "destructive",
-          title: "Login failed",
-          description: "An unexpected error occurred.",
-        });
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+    // Submit the form immediately
+    form.handleSubmit(onSubmit)();
   };
 
   return (
@@ -347,36 +267,20 @@ const Login = () => {
                       className="w-full justify-start text-left border-gray-200 hover:bg-blue-50"
                       onClick={() => useSavedCredential(cred)}
                     >
-                      <Save className="h-4 w-4 mr-2 text-blue-600" />
                       {cred.email}
                     </Button>
                   ))}
                 </div>
               </div>
             )}
-            
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-gray-200"></span>
-              </div>
-              <div className="relative flex justify-center text-xs">
-                <span className="bg-white px-2 text-gray-500">or</span>
-              </div>
-            </div>
-            
-            <Button 
-              type="button" 
-              variant="outline" 
-              className="w-full border-gray-200 hover:bg-blue-50 hover:text-blue-700 transition-all duration-200" 
-              onClick={handleDemoLogin}
-              disabled={loading}
-            >
-              Demo Login (HR/Admin)
-            </Button>
           </CardContent>
-          <CardFooter className="flex flex-col space-y-4 border-t pt-4">
-            <div className="text-center text-xs text-gray-500">
-              <p className="my-2">For demo purposes, use: admin@example.com / password123</p>
+          <CardFooter className="flex justify-center border-t pt-4">
+            <div className="text-center text-sm">
+              <p>Don't have an account?{" "}
+                <Link to="/register" className="text-blue-600 hover:underline font-medium">
+                  Register
+                </Link>
+              </p>
             </div>
           </CardFooter>
         </Card>

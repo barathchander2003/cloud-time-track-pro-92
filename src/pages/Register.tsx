@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Clock, ArrowLeft } from "lucide-react";
+import { Clock, ArrowLeft, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,7 +48,7 @@ const Register = () => {
   const [emailInput, setEmailInput] = useState("");
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { session } = useAuth();
+  const { session, signIn } = useAuth();
 
   // If already logged in, redirect to dashboard
   if (session) {
@@ -84,6 +84,7 @@ const Register = () => {
     setLoading(true);
     
     try {
+      // Register the user without email verification
       const { error } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
@@ -92,7 +93,8 @@ const Register = () => {
             first_name: data.firstName,
             last_name: data.lastName,
             role: data.role
-          }
+          },
+          emailRedirectTo: window.location.origin + '/login'
         }
       });
       
@@ -102,14 +104,19 @@ const Register = () => {
           title: "Registration failed",
           description: error.message,
         });
-      } else {
-        toast({
-          title: "Registration successful",
-          description: "Please check your email to confirm your account.",
-        });
-        navigate("/login?registered=true");
+        setLoading(false);
+        return;
       }
-    } catch (error) {
+      
+      toast({
+        title: "Registration successful",
+        description: "Your account has been created successfully.",
+      });
+      
+      // Automatically log the user in after registration
+      await signIn(data.email, data.password);
+      
+    } catch (error: any) {
       console.error("Registration error:", error);
       toast({
         variant: "destructive",
@@ -254,7 +261,12 @@ const Register = () => {
                   )}
                 />
                 <Button type="submit" className="w-full bg-brand-600 hover:bg-brand-700" disabled={loading}>
-                  {loading ? "Creating account..." : "Register"}
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating account...
+                    </>
+                  ) : "Register"}
                 </Button>
               </form>
             </Form>

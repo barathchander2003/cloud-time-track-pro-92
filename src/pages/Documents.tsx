@@ -1,35 +1,66 @@
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import DocumentUploader from "@/components/documents/DocumentUploader";
 import DocumentList from "@/components/documents/DocumentList";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const Documents = () => {
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+  
   // Initialize storage bucket if needed
   useEffect(() => {
     const initializeStorage = async () => {
       try {
-        // Skip this if we know the bucket already exists
-        // This is just a safeguard for demo/development
-        const { error } = await fetch('https://pufxogvzyppvccxafxtx.supabase.co/storage/v1/bucket/documents', {
-          method: 'HEAD'
-        }).then(response => {
-          if (!response.ok && response.status === 404) {
-            throw new Error("Bucket does not exist");
-          }
-          return { error: null };
-        });
+        setLoading(true);
         
-        // If bucket doesn't exist, create it (would typically be done in migrations)
-        if (error) {
-          console.log("Documents bucket might not exist, would create it here");
+        // Check if the documents bucket exists
+        const { data: buckets, error: bucketsError } = await supabase
+          .storage
+          .listBuckets();
+          
+        if (bucketsError) {
+          console.error("Error checking buckets:", bucketsError);
+          return;
+        }
+        
+        // Look for documents bucket
+        const documentsBucket = buckets?.find(bucket => bucket.name === 'documents');
+        
+        if (!documentsBucket) {
+          console.log("Documents bucket doesn't exist, creating it");
+          
+          // Create the documents bucket
+          const { error: createError } = await supabase
+            .storage
+            .createBucket('documents', { public: true });
+            
+          if (createError) {
+            console.error("Error creating documents bucket:", createError);
+            toast({
+              variant: "destructive",
+              title: "Storage Error",
+              description: "Could not initialize document storage. Please contact support."
+            });
+            return;
+          }
+          
+          console.log("Documents bucket created successfully");
+          toast({
+            title: "Storage Ready",
+            description: "Document storage has been initialized."
+          });
         }
       } catch (error) {
-        console.error("Storage check error:", error);
+        console.error("Storage initialization error:", error);
+      } finally {
+        setLoading(false);
       }
     };
     
     initializeStorage();
-  }, []);
+  }, [toast]);
   
   return (
     <div className="space-y-6">
@@ -43,6 +74,12 @@ const Documents = () => {
       <DocumentUploader />
       
       <DocumentList />
+      
+      {loading && (
+        <div className="flex justify-center p-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-700"></div>
+        </div>
+      )}
     </div>
   );
 };

@@ -62,6 +62,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const { data } = await supabase.auth.getUser();
         const userRole = data?.user?.user_metadata?.role || 'employee';
         
+        // Create a profile for this user if one doesn't exist
+        const { data: newProfile, error: insertError } = await supabase
+          .from("profiles")
+          .insert([{ id: userId, role: userRole }])
+          .select('*')
+          .single();
+          
+        if (insertError) {
+          console.error("Error creating profile:", insertError);
+        } else if (newProfile) {
+          console.log("Created new profile:", newProfile);
+          return newProfile as UserProfile;
+        }
+        
         return { 
           id: userId, 
           role: userRole,
@@ -104,6 +118,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             setTimeout(async () => {
               const userProfile = await fetchProfile(currentSession.user.id);
               setProfile(userProfile);
+              
+              // Navigate to dashboard after successful login
+              if (event === 'SIGNED_IN') {
+                navigate("/dashboard");
+              }
             }, 0);
           }
         } 
@@ -161,56 +180,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [navigate]);
 
   const signIn = async (email: string, password: string) => {
     try {
       console.log("Signing in with email:", email);
       
-      // For demo purposes, create a mock successful response if using specific credentials
-      if (email === "admin@example.com" && password === "password123") {
-        console.log("Using demo credentials - creating mock session");
-        
-        // Create a proper User object with all required fields
-        const mockUser = {
-          id: "demo-user-id",
-          app_metadata: { provider: "email" },
-          user_metadata: { name: "Admin User", role: "admin" },
-          aud: "authenticated",
-          created_at: new Date().toISOString(),
-          email: email,
-          email_confirmed_at: new Date().toISOString(),
-          phone: "",
-          phone_confirmed_at: null,
-          confirmation_sent_at: null,
-          confirmed_at: new Date().toISOString(),
-          last_sign_in_at: new Date().toISOString(),
-          role: "authenticated",
-          updated_at: new Date().toISOString(),
-          identities: [],
-          factors: []
-        } as User;
-        
-        // Create a mock session
-        const mockSession = {
-          access_token: "mock-access-token",
-          refresh_token: "mock-refresh-token",
-          expires_in: 3600,
-          expires_at: Math.floor(Date.now() / 1000) + 3600,
-          token_type: "bearer",
-          user: mockUser
-        } as Session;
-        
-        // Update local state
-        setUser(mockUser);
-        setSession(mockSession);
-        setProfile({ id: mockUser.id, role: "admin" });
-        
-        return { data: mockSession, error: null };
-      }
-      
-      // Regular Supabase authentication for non-demo credentials
-      // Don't check email verification for login
+      // Regular Supabase authentication - without checking email verification
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -228,6 +204,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         // Fetch and set the user profile
         const userProfile = await fetchProfile(data.session.user.id);
         setProfile(userProfile);
+        
+        navigate("/dashboard");
       }
       
       return { 
