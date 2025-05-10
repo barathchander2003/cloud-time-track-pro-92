@@ -38,7 +38,7 @@ const Login = () => {
   const [emailInput, setEmailInput] = useState("");
   const [savedCredentials, setSavedCredentials] = useState<SavedCredentials[]>([]);
   const { toast } = useToast();
-  const { session, isLoading } = useAuth();
+  const { session, isLoading, signIn } = useAuth();
   const location = useLocation();
 
   useEffect(() => {
@@ -97,10 +97,7 @@ const Login = () => {
     
     try {
       console.log("Attempting login with:", data.email);
-      const { data: sessionData, error } = await supabase.auth.signInWithPassword({
-        email: data.email,
-        password: data.password,
-      });
+      const { data: sessionData, error } = await signIn(data.email, data.password);
       
       if (error) {
         console.error("Login error:", error);
@@ -146,23 +143,81 @@ const Login = () => {
     form.setValue("email", demoCredentials.email);
     form.setValue("password", demoCredentials.password);
     
-    // Manually trigger submission with demo credentials
-    onSubmit({
-      email: demoCredentials.email,
-      password: demoCredentials.password,
-      remember: form.getValues("remember")
-    });
+    // Use the signIn function directly from AuthContext
+    signIn(demoCredentials.email, demoCredentials.password)
+      .then(({ data: sessionData, error }) => {
+        if (error) {
+          console.error("Demo login failed:", error);
+          toast({
+            variant: "destructive", 
+            title: "Demo login failed",
+            description: error.message || "Could not log in with demo credentials."
+          });
+        } else if (sessionData) {
+          // Save demo credentials if remember is checked
+          if (form.getValues("remember")) {
+            const newCredential = { 
+              email: demoCredentials.email, 
+              password: demoCredentials.password 
+            };
+            const updatedCredentials = [...savedCredentials.filter(
+              cred => cred.email !== demoCredentials.email
+            ), newCredential];
+            localStorage.setItem('savedCredentials', JSON.stringify(updatedCredentials));
+          }
+          
+          toast({
+            title: "Demo login successful",
+            description: "Welcome to TimeTrack HR system."
+          });
+        }
+      })
+      .catch(error => {
+        console.error("Unexpected demo login error:", error);
+        toast({
+          variant: "destructive",
+          title: "Demo login failed",
+          description: "An unexpected error occurred."
+        });
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   };
   
   const useSavedCredential = (cred: SavedCredentials) => {
     form.setValue("email", cred.email);
     form.setValue("password", cred.password);
     setEmailInput(cred.email);
-    onSubmit({
-      email: cred.email,
-      password: cred.password,
-      remember: form.getValues("remember")
-    });
+    
+    // Use signIn directly to prevent errors
+    setLoading(true);
+    signIn(cred.email, cred.password)
+      .then(({ data: sessionData, error }) => {
+        if (error) {
+          toast({
+            variant: "destructive",
+            title: "Login failed",
+            description: error.message || "Invalid email or password.",
+          });
+        } else if (sessionData) {
+          toast({
+            title: "Login successful",
+            description: "Welcome to TimeTrack HR system.",
+          });
+        }
+      })
+      .catch(error => {
+        console.error("Login error:", error);
+        toast({
+          variant: "destructive",
+          title: "Login failed",
+          description: "An unexpected error occurred.",
+        });
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   };
 
   return (
@@ -322,9 +377,6 @@ const Login = () => {
           <CardFooter className="flex flex-col space-y-4 border-t pt-4">
             <div className="text-center text-xs text-gray-500">
               <p className="my-2">For demo purposes, use: admin@example.com / password123</p>
-              <p className="text-xs text-gray-400 mt-4">
-                {/* Hidden by default as requested */}
-              </p>
             </div>
           </CardFooter>
         </Card>
