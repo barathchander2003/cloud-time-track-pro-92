@@ -15,11 +15,9 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Clock, ArrowRight, Loader2, AlertCircle, CheckCircle, Save } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { Clock, ArrowRight, Loader2, Save } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 
 const loginSchema = z.object({
@@ -42,12 +40,8 @@ const Login = () => {
   const { toast } = useToast();
   const { session, isLoading } = useAuth();
   const location = useLocation();
-  const [registered, setRegistered] = useState(false);
 
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    setRegistered(params.get("registered") === "true");
-    
     // Load saved credentials from localStorage
     const saved = localStorage.getItem('savedCredentials');
     if (saved) {
@@ -190,15 +184,6 @@ const Login = () => {
             Employee management & time tracking system
           </p>
         </div>
-        
-        {registered && (
-          <Alert className="mb-6 bg-green-50 border-green-200 text-green-800">
-            <CheckCircle className="h-4 w-4 text-green-600" />
-            <AlertDescription>
-              Registration successful! Please check your email to confirm your account.
-            </AlertDescription>
-          </Alert>
-        )}
         
         <Card className="border-none shadow-xl overflow-hidden">
           <div className="h-1.5 bg-gradient-to-r from-blue-500 to-indigo-600"></div>

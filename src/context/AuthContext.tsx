@@ -104,15 +104,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             setTimeout(async () => {
               const userProfile = await fetchProfile(currentSession.user.id);
               setProfile(userProfile);
-              
-              // Check if we need to redirect based on the current URL
-              const currentPath = window.location.pathname;
-              if (currentPath === '/confirm-email') {
-                // Set a short timeout to allow the confirmation process to complete
-                setTimeout(() => {
-                  navigate('/login?verified=true');
-                }, 500);
-              }
             }, 0);
           }
         } 
@@ -188,12 +179,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           app_metadata: { role: "admin" },
           aud: "authenticated",
           created_at: new Date().toISOString(),
-          confirmed_at: new Date().toISOString(), // Mark as confirmed
+          confirmed_at: new Date().toISOString(),
           last_sign_in_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           identities: [],
           factors: [],
-          email_confirmed_at: new Date().toISOString(), // Critical for demo user
+          email_confirmed_at: new Date().toISOString(),
           phone: "",
           phone_confirmed_at: null,
           role: "authenticated"

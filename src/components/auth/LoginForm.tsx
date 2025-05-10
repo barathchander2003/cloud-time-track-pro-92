@@ -48,20 +48,11 @@ const LoginForm = () => {
       if (error) {
         console.error("Login error:", error);
         
-        // Handle specific error types
-        if (error.message.includes("Email not confirmed")) {
-          toast({
-            variant: "destructive",
-            title: "Email not confirmed",
-            description: "Please check your email and confirm your account before logging in.",
-          });
-        } else {
-          toast({
-            variant: "destructive",
-            title: "Login failed",
-            description: error.message || "Invalid email or password.",
-          });
-        }
+        toast({
+          variant: "destructive",
+          title: "Login failed",
+          description: error.message || "Invalid email or password.",
+        });
       } else if (sessionData) {
         toast({
           title: "Login successful",
