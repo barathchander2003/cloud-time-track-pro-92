@@ -29,9 +29,10 @@ const queryClient = new QueryClient();
 // Protected route component that checks authentication
 interface ProtectedRouteProps {
   allowedRoles?: string[];
+  children?: React.ReactNode; // Add children prop
 }
 
-const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
+const ProtectedRoute = ({ allowedRoles, children }: ProtectedRouteProps) => {
   const { session, isLoading, profile } = useAuth();
 
   if (isLoading) {
@@ -49,7 +50,7 @@ const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
     return <Navigate to="/dashboard" replace />;
   }
 
-  return <Outlet />;
+  return children ? <>{children}</> : <Outlet />;
 };
 
 // Layout wrapper for protected routes

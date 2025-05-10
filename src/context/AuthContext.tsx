@@ -161,7 +161,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       subscription.unsubscribe();
     };
-  }, [navigate]);
+  }, []);
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -174,32 +174,31 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         // Create a proper User object with all required fields
         const mockUser = {
           id: "demo-user-id",
-          email: email,
+          app_metadata: { provider: "email" },
           user_metadata: { name: "Admin User", role: "admin" },
-          app_metadata: { role: "admin" },
           aud: "authenticated",
           created_at: new Date().toISOString(),
-          confirmed_at: new Date().toISOString(),
-          last_sign_in_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          identities: [],
-          factors: [],
+          email: email,
           email_confirmed_at: new Date().toISOString(),
           phone: "",
           phone_confirmed_at: null,
-          role: "authenticated"
-        } as unknown as User;
+          confirmation_sent_at: null,
+          confirmed_at: new Date().toISOString(),
+          last_sign_in_at: new Date().toISOString(),
+          role: "authenticated",
+          updated_at: new Date().toISOString(),
+          identities: [],
+          factors: []
+        } as User;
         
         // Create a mock session
         const mockSession = {
-          user: mockUser,
-          access_token: "demo-access-token",
-          refresh_token: "demo-refresh-token",
-          expires_at: Date.now() + 3600,
+          access_token: "mock-access-token",
+          refresh_token: "mock-refresh-token",
           expires_in: 3600,
+          expires_at: Math.floor(Date.now() / 1000) + 3600,
           token_type: "bearer",
-          provider_token: null,
-          provider_refresh_token: null,
+          user: mockUser
         } as Session;
         
         // Update local state
@@ -211,6 +210,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
       
       // Regular Supabase authentication for non-demo credentials
+      // Don't check email verification for login
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
