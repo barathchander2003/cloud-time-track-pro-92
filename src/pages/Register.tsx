@@ -85,7 +85,7 @@ const Register = () => {
     
     try {
       // Register the user without email verification
-      const { error } = await supabase.auth.signUp({
+      const { data: authData, error } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
         options: {
