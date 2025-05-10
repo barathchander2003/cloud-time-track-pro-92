@@ -104,6 +104,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             setTimeout(async () => {
               const userProfile = await fetchProfile(currentSession.user.id);
               setProfile(userProfile);
+              
+              // Check if we need to redirect based on the current URL
+              const currentPath = window.location.pathname;
+              if (currentPath === '/confirm-email') {
+                // Set a short timeout to allow the confirmation process to complete
+                setTimeout(() => {
+                  navigate('/login?verified=true');
+                }, 500);
+              }
             }, 0);
           }
         } 
@@ -111,6 +120,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setSession(null);
           setUser(null);
           setProfile(null);
+        } 
+        else if (event === 'USER_UPDATED') {
+          // Refresh user data when updated
+          if (currentSession?.user) {
+            setTimeout(async () => {
+              const userProfile = await fetchProfile(currentSession.user.id);
+              setProfile(userProfile);
+            }, 0);
+          }
         }
         
         setIsLoading(false);
@@ -152,7 +170,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [navigate]);
 
   const signIn = async (email: string, password: string) => {
     try {

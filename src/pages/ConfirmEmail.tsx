@@ -35,6 +35,9 @@ const ConfirmEmail = () => {
         const { error } = await supabase.auth.verifyOtp({
           token_hash: token,
           type: type as any,
+          options: {
+            redirectTo: window.location.origin + "/login?verified=true"
+          }
         });
 
         if (error) {
@@ -52,10 +55,10 @@ const ConfirmEmail = () => {
           description: "Your account has been verified. You can now log in.",
         });
         
-        // Redirect after 3 seconds
+        // Redirect after 2 seconds
         setTimeout(() => {
-          navigate("/login");
-        }, 3000);
+          navigate("/login?verified=true");
+        }, 2000);
         
       } catch (error: any) {
         console.error("Error during verification:", error);
@@ -103,7 +106,7 @@ const ConfirmEmail = () => {
                 <p className="text-center text-muted-foreground">
                   Redirecting you to login page in a few seconds...
                 </p>
-                <Button onClick={() => navigate("/login")} className="mt-4">
+                <Button onClick={() => navigate("/login?verified=true")} className="mt-4">
                   Go to Login
                 </Button>
               </div>

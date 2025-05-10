@@ -15,21 +15,30 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Clock, ArrowRight, Loader2, AlertCircle, CheckCircle } from "lucide-react";
+import { Clock, ArrowRight, Loader2, AlertCircle, CheckCircle, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
   password: z.string().min(1, { message: "Password is required." }),
+  remember: z.boolean().default(true),
 });
 
 type LoginValues = z.infer<typeof loginSchema>;
 
+type SavedCredentials = {
+  email: string;
+  password: string;
+};
+
 const Login = () => {
   const [loading, setLoading] = useState(false);
+  const [emailInput, setEmailInput] = useState("");
+  const [savedCredentials, setSavedCredentials] = useState<SavedCredentials[]>([]);
   const { toast } = useToast();
   const { session, isLoading } = useAuth();
   const location = useLocation();
@@ -38,6 +47,16 @@ const Login = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     setRegistered(params.get("registered") === "true");
+    
+    // Load saved credentials from localStorage
+    const saved = localStorage.getItem('savedCredentials');
+    if (saved) {
+      try {
+        setSavedCredentials(JSON.parse(saved));
+      } catch (e) {
+        console.error("Could not parse saved credentials");
+      }
+    }
   }, [location]);
 
   const form = useForm<LoginValues>({
@@ -45,8 +64,22 @@ const Login = () => {
     defaultValues: {
       email: "admin@example.com",
       password: "password123",
+      remember: true,
     },
   });
+
+  // Handle email input to auto-append @gmail.com if not present
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value;
+    setEmailInput(value);
+    
+    // If @ is not in the input and input is not empty, append @gmail.com
+    if (!value.includes('@') && value) {
+      form.setValue('email', `${value}@gmail.com`);
+    } else {
+      form.setValue('email', value);
+    }
+  };
 
   // If already logged in, redirect to dashboard
   if (isLoading) {
@@ -83,6 +116,13 @@ const Login = () => {
           description: error.message || "Invalid email or password.",
         });
       } else if (sessionData) {
+        // Save credentials if remember is checked
+        if (data.remember) {
+          const newCredential = { email: data.email, password: data.password };
+          const updatedCredentials = [...savedCredentials.filter(cred => cred.email !== data.email), newCredential];
+          localStorage.setItem('savedCredentials', JSON.stringify(updatedCredentials));
+        }
+        
         toast({
           title: "Login successful",
           description: "Welcome to TimeTrack HR system.",
@@ -113,7 +153,22 @@ const Login = () => {
     form.setValue("password", demoCredentials.password);
     
     // Manually trigger submission with demo credentials
-    onSubmit(demoCredentials);
+    onSubmit({
+      email: demoCredentials.email,
+      password: demoCredentials.password,
+      remember: form.getValues("remember")
+    });
+  };
+  
+  const useSavedCredential = (cred: SavedCredentials) => {
+    form.setValue("email", cred.email);
+    form.setValue("password", cred.password);
+    setEmailInput(cred.email);
+    onSubmit({
+      email: cred.email,
+      password: cred.password,
+      remember: form.getValues("remember")
+    });
   };
 
   return (
@@ -159,15 +214,17 @@ const Login = () => {
                 <FormField
                   control={form.control}
                   name="email"
-                  render={({ field }) => (
+                  render={({ field: { onChange, ...rest } }) => (
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
                         <Input 
-                          placeholder="admin@example.com" 
+                          placeholder="username" 
                           autoComplete="email"
                           className="bg-gray-50 border-gray-200" 
-                          {...field} 
+                          {...rest} 
+                          value={emailInput}
+                          onChange={handleEmailChange}
                         />
                       </FormControl>
                       <FormMessage />
@@ -201,6 +258,24 @@ const Login = () => {
                     </FormItem>
                   )}
                 />
+                
+                <FormField
+                  control={form.control}
+                  name="remember"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>Remember my credentials</FormLabel>
+                      </div>
+                    </FormItem>
+                  )}
+                />
                
                 <Button 
                   type="submit" 
@@ -220,6 +295,25 @@ const Login = () => {
                 </Button>
               </form>
             </Form>
+            
+            {savedCredentials.length > 0 && (
+              <div className="mt-4">
+                <p className="text-sm font-medium text-gray-600 mb-2">Saved accounts</p>
+                <div className="space-y-2">
+                  {savedCredentials.map((cred, index) => (
+                    <Button 
+                      key={index} 
+                      variant="outline" 
+                      className="w-full justify-start text-left border-gray-200 hover:bg-blue-50"
+                      onClick={() => useSavedCredential(cred)}
+                    >
+                      <Save className="h-4 w-4 mr-2 text-blue-600" />
+                      {cred.email}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
             
             <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
@@ -244,10 +338,7 @@ const Login = () => {
             <div className="text-center text-xs text-gray-500">
               <p className="my-2">For demo purposes, use: admin@example.com / password123</p>
               <p className="text-xs text-gray-400 mt-4">
-                Need an account?{" "}
-                <Link to="/register" className="text-blue-600 hover:underline text-xs opacity-70">
-                  Create an account
-                </Link>
+                {/* Hidden by default as requested */}
               </p>
             </div>
           </CardFooter>

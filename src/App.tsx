@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -53,8 +54,8 @@ const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
   return <Outlet />;
 };
 
-// Layout wrapper for protected routes
-const ProtectedLayout = () => {
+// Layout wrapper for protected routes - fix for the TS error by properly typing it
+const ProtectedLayout: React.FC = () => {
   return (
     <Layout>
       <Outlet />
@@ -81,8 +82,8 @@ const EmployeeRoute = () => {
   return <Outlet />;
 };
 
-// Employee layout wrapper
-const EmployeeLayoutWrapper = () => {
+// Employee layout wrapper - fix for the TS error by properly typing it
+const EmployeeLayoutWrapper: React.FC = () => {
   return (
     <EmployeeLayout>
       <Outlet />

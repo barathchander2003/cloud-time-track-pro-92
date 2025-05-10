@@ -45,6 +45,7 @@ type RegisterValues = z.infer<typeof registerSchema>;
 
 const Register = () => {
   const [loading, setLoading] = useState(false);
+  const [emailInput, setEmailInput] = useState("");
   const { toast } = useToast();
   const navigate = useNavigate();
   const { session } = useAuth();
@@ -65,6 +66,19 @@ const Register = () => {
       role: "employee"
     },
   });
+
+  // Handle email input to auto-append @gmail.com if not present
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value;
+    setEmailInput(value);
+    
+    // If @ is not in the input and input is not empty, append @gmail.com
+    if (!value.includes('@') && value) {
+      form.setValue('email', `${value}@gmail.com`);
+    } else {
+      form.setValue('email', value);
+    }
+  };
 
   const onSubmit = async (data: RegisterValues) => {
     setLoading(true);
@@ -162,11 +176,17 @@ const Register = () => {
                 <FormField
                   control={form.control}
                   name="email"
-                  render={({ field }) => (
+                  render={({ field: { onChange, ...rest } }) => (
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input placeholder="john.doe@example.com" {...field} />
+                        <Input 
+                          placeholder="username" 
+                          {...rest} 
+                          value={emailInput}
+                          onChange={handleEmailChange}
+                          autoComplete="email"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -204,7 +224,12 @@ const Register = () => {
                     <FormItem>
                       <FormLabel>Password</FormLabel>
                       <FormControl>
-                        <Input type="password" placeholder="••••••••" {...field} />
+                        <Input 
+                          type="password" 
+                          placeholder="••••••••" 
+                          {...field} 
+                          autoComplete="new-password"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -217,7 +242,12 @@ const Register = () => {
                     <FormItem>
                       <FormLabel>Confirm Password</FormLabel>
                       <FormControl>
-                        <Input type="password" placeholder="••••••••" {...field} />
+                        <Input 
+                          type="password" 
+                          placeholder="••••••••" 
+                          {...field} 
+                          autoComplete="new-password"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
