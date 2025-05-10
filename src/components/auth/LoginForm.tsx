@@ -91,8 +91,36 @@ const LoginForm = () => {
     form.setValue("email", demoCredentials.email);
     form.setValue("password", demoCredentials.password);
     
-    // Submit the form directly
-    form.handleSubmit(onSubmit)(new Event('submit') as any);
+    // Handle demo login directly using the signIn function
+    setLoading(true);
+    signIn(demoCredentials.email, demoCredentials.password)
+      .then(({ data: sessionData, error }) => {
+        if (error) {
+          console.error("Demo login failed:", error);
+          toast({
+            variant: "destructive", 
+            title: "Demo login failed",
+            description: error.message || "Could not log in with demo credentials."
+          });
+        } else if (sessionData) {
+          toast({
+            title: "Demo login successful",
+            description: "Welcome to TimeTrack HR system."
+          });
+          navigate("/dashboard");
+        }
+      })
+      .catch(error => {
+        console.error("Unexpected demo login error:", error);
+        toast({
+          variant: "destructive",
+          title: "Demo login failed",
+          description: "An unexpected error occurred."
+        });
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   };
 
   return (

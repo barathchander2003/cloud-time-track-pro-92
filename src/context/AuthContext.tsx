@@ -188,14 +188,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           app_metadata: { role: "admin" },
           aud: "authenticated",
           created_at: new Date().toISOString(),
-          // Add other required properties from the User type
-          role: "",
           confirmed_at: new Date().toISOString(), // Mark as confirmed
-          last_sign_in_at: "",
-          updated_at: "",
+          last_sign_in_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
           identities: [],
           factors: [],
-          email_confirmed_at: new Date().toISOString() // Critical for demo user
+          email_confirmed_at: new Date().toISOString(), // Critical for demo user
+          phone: "",
+          phone_confirmed_at: null,
+          role: "authenticated"
         } as unknown as User;
         
         // Create a mock session
@@ -203,7 +204,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           user: mockUser,
           access_token: "demo-access-token",
           refresh_token: "demo-refresh-token",
-          expires_at: Date.now() + 3600
+          expires_at: Date.now() + 3600,
+          expires_in: 3600,
+          token_type: "bearer",
+          provider_token: null,
+          provider_refresh_token: null,
         } as Session;
         
         // Update local state
@@ -224,6 +229,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         data?.session ? "Session received" : "No session", 
         error ? `Error: ${error.message}` : "No error"
       );
+      
+      if (data?.session) {
+        setUser(data.session.user);
+        setSession(data.session);
+        
+        // Fetch and set the user profile
+        const userProfile = await fetchProfile(data.session.user.id);
+        setProfile(userProfile);
+      }
       
       return { 
         data: data?.session,
