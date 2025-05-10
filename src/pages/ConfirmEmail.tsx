@@ -35,9 +35,6 @@ const ConfirmEmail = () => {
         const { error } = await supabase.auth.verifyOtp({
           token_hash: token,
           type: type as any,
-          options: {
-            redirectTo: window.location.origin + "/login?verified=true"
-          }
         });
 
         if (error) {

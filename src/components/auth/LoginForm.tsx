@@ -47,11 +47,21 @@ const LoginForm = () => {
       
       if (error) {
         console.error("Login error:", error);
-        toast({
-          variant: "destructive",
-          title: "Login failed",
-          description: error.message || "Invalid email or password.",
-        });
+        
+        // Handle specific error types
+        if (error.message.includes("Email not confirmed")) {
+          toast({
+            variant: "destructive",
+            title: "Email not confirmed",
+            description: "Please check your email and confirm your account before logging in.",
+          });
+        } else {
+          toast({
+            variant: "destructive",
+            title: "Login failed",
+            description: error.message || "Invalid email or password.",
+          });
+        }
       } else if (sessionData) {
         toast({
           title: "Login successful",
@@ -72,9 +82,7 @@ const LoginForm = () => {
   };
 
   const handleDemoLogin = () => {
-    setLoading(true);
-    
-    // Create fixed demo credentials
+    // Use the exact demo credentials
     const demoCredentials = {
       email: "admin@example.com",
       password: "password123"
@@ -83,35 +91,8 @@ const LoginForm = () => {
     form.setValue("email", demoCredentials.email);
     form.setValue("password", demoCredentials.password);
     
-    // Manually trigger submission with demo credentials
-    signIn(demoCredentials.email, demoCredentials.password)
-      .then(({ data: sessionData, error }) => {
-        if (error) {
-          console.error("Demo login error:", error);
-          toast({
-            variant: "destructive",
-            title: "Demo login failed",
-            description: error.message || "Could not log in with demo account.",
-          });
-        } else if (sessionData) {
-          toast({
-            title: "Demo login successful",
-            description: "Welcome to TimeTrack HR system.",
-          });
-          navigate("/dashboard");
-        }
-      })
-      .catch((error) => {
-        console.error("Unexpected demo login error:", error);
-        toast({
-          variant: "destructive",
-          title: "Demo login failed",
-          description: "An unexpected error occurred.",
-        });
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+    // Submit the form directly
+    form.handleSubmit(onSubmit)(new Event('submit') as any);
   };
 
   return (

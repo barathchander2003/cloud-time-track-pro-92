@@ -190,11 +190,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           created_at: new Date().toISOString(),
           // Add other required properties from the User type
           role: "",
-          confirmed_at: "",
+          confirmed_at: new Date().toISOString(), // Mark as confirmed
           last_sign_in_at: "",
           updated_at: "",
           identities: [],
           factors: [],
+          email_confirmed_at: new Date().toISOString() // Critical for demo user
         } as unknown as User;
         
         // Create a mock session

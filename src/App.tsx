@@ -4,7 +4,6 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
-import { ReactNode } from "react";
 
 import Layout from "./components/Layout";
 import EmployeeLayout from "./components/EmployeeLayout";
@@ -54,8 +53,8 @@ const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
   return <Outlet />;
 };
 
-// Layout wrapper for protected routes - fix for the TS error by properly typing it
-const ProtectedLayout: React.FC = () => {
+// Layout wrapper for protected routes
+const ProtectedLayout = () => {
   return (
     <Layout>
       <Outlet />
@@ -82,8 +81,8 @@ const EmployeeRoute = () => {
   return <Outlet />;
 };
 
-// Employee layout wrapper - fix for the TS error by properly typing it
-const EmployeeLayoutWrapper: React.FC = () => {
+// Employee layout wrapper
+const EmployeeLayoutWrapper = () => {
   return (
     <EmployeeLayout>
       <Outlet />
