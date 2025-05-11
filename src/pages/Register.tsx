@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate, Navigate, Link } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -94,9 +93,8 @@ const Register = () => {
             last_name: data.lastName,
             role: data.role
           },
-          emailRedirectTo: window.location.origin + '/login',
-          // Skip email verification
-          emailConfirm: false
+          emailRedirectTo: window.location.origin + '/login'
+          // Remove emailConfirm option as it doesn't exist in the type
         }
       });
       

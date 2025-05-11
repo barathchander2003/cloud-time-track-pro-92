@@ -29,6 +29,7 @@ const queryClient = new QueryClient();
 // Protected route component that checks authentication
 interface ProtectedRouteProps {
   allowedRoles?: string[];
+  element?: React.ReactNode;
   children?: React.ReactNode;
 }
 
