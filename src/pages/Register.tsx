@@ -94,7 +94,9 @@ const Register = () => {
             last_name: data.lastName,
             role: data.role
           },
-          emailRedirectTo: window.location.origin + '/login'
+          emailRedirectTo: window.location.origin + '/login',
+          // Skip email verification
+          emailConfirm: false
         }
       });
       
@@ -108,6 +110,29 @@ const Register = () => {
         return;
       }
       
+      // Create a profile entry for the user if registration succeeded
+      if (authData?.user) {
+        try {
+          // Insert profile data with the role
+          const { error: profileError } = await supabase
+            .from("profiles")
+            .insert([
+              {
+                id: authData.user.id,
+                role: data.role,
+                first_name: data.firstName,
+                last_name: data.lastName
+              }
+            ]);
+            
+          if (profileError) {
+            console.error("Error creating profile:", profileError);
+          }
+        } catch (profileErr) {
+          console.error("Error creating profile:", profileErr);
+        }
+      }
+      
       toast({
         title: "Registration successful",
         description: "Your account has been created successfully.",
@@ -115,6 +140,9 @@ const Register = () => {
       
       // Automatically log the user in after registration
       await signIn(data.email, data.password);
+      
+      // Navigate to dashboard
+      navigate("/dashboard");
       
     } catch (error: any) {
       console.error("Registration error:", error);

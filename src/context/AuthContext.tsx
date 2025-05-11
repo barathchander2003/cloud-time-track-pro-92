@@ -58,30 +58,40 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       if (error) {
         console.error("Error fetching profile:", error);
-        // If profile doesn't exist, use the user's metadata for role
-        const { data } = await supabase.auth.getUser();
-        const userRole = data?.user?.user_metadata?.role || 'employee';
         
-        // Create a profile for this user if one doesn't exist
+        // Get user metadata from auth
+        const { data: userData } = await supabase.auth.getUser();
+        const userMetadata = userData?.user?.user_metadata;
+        
+        // Create a profile for this user with data from user_metadata
+        const userRole = userMetadata?.role || 'employee';
+        const firstName = userMetadata?.first_name;
+        const lastName = userMetadata?.last_name;
+        
         const { data: newProfile, error: insertError } = await supabase
           .from("profiles")
-          .insert([{ id: userId, role: userRole }])
+          .insert([{ 
+            id: userId, 
+            role: userRole,
+            first_name: firstName,
+            last_name: lastName
+          }])
           .select('*')
           .single();
           
         if (insertError) {
           console.error("Error creating profile:", insertError);
+          // Return a basic profile based on metadata even if insert fails
+          return { 
+            id: userId, 
+            role: userRole,
+            first_name: firstName,
+            last_name: lastName
+          };
         } else if (newProfile) {
           console.log("Created new profile:", newProfile);
           return newProfile as UserProfile;
         }
-        
-        return { 
-          id: userId, 
-          role: userRole,
-          first_name: data?.user?.user_metadata?.first_name,
-          last_name: data?.user?.user_metadata?.last_name
-        };
       }
       
       console.log("Profile fetched:", data);
@@ -104,9 +114,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     console.log("Setting up auth state listener...");
     
-    // Set up auth state listener
+    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, currentSession) => {
+      (event, currentSession) => {
         console.log("Auth state changed:", event, currentSession ? "session exists" : "no session");
         
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
@@ -118,11 +128,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             setTimeout(async () => {
               const userProfile = await fetchProfile(currentSession.user.id);
               setProfile(userProfile);
-              
-              // Navigate to dashboard after successful login
-              if (event === 'SIGNED_IN') {
-                navigate("/dashboard");
-              }
             }, 0);
           }
         } 
@@ -140,12 +145,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             }, 0);
           }
         }
-        
-        setIsLoading(false);
       }
     );
 
-    // Get initial session
+    // THEN get initial session
     const initializeAuth = async () => {
       try {
         console.log("Checking for existing session...");
@@ -153,6 +156,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         
         if (error) {
           console.error("Error getting session:", error);
+          setIsLoading(false);
+          return;
         }
         
         if (data.session) {
@@ -186,7 +191,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       console.log("Signing in with email:", email);
       
-      // Regular Supabase authentication - without checking email verification
+      // Direct sign in, no email verification check
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -205,7 +210,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const userProfile = await fetchProfile(data.session.user.id);
         setProfile(userProfile);
         
-        navigate("/dashboard");
+        // Navigate happens in the component after successful login
       }
       
       return { 
