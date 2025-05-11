@@ -91,55 +91,53 @@ const EmployeeLayoutWrapper = () => {
 };
 
 // Route wrapper for the AuthProvider
-const AppRoutes = () => {
-  return (
-    <Routes>
-      <Route path="/" element={<Index />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
+const AppRoutes = () => (
+  <Routes>
+    <Route path="/" element={<Index />} />
+    <Route path="/login" element={<Login />} />
+    <Route path="/register" element={<Register />} />
+    <Route path="/forgot-password" element={<ForgotPassword />} />
+    <Route path="/reset-password" element={<ResetPassword />} />
 
-      {/* Employee routes */}
-      <Route element={<EmployeeRoute />}>
-        <Route element={<EmployeeLayoutWrapper />}>
-          <Route path="/employee" element={<EmployeeDashboard />} />
-          <Route path="/employee/timesheet" element={<Timesheets />} />
-          <Route path="/employee/leave" element={<Approvals />} />
-          <Route path="/employee/documents" element={<Documents />} />
-        </Route>
+    {/* Employee routes */}
+    <Route element={<EmployeeRoute />}>
+      <Route element={<EmployeeLayoutWrapper />}>
+        <Route path="/employee" element={<EmployeeDashboard />} />
+        <Route path="/employee/timesheet" element={<Timesheets />} />
+        <Route path="/employee/leave" element={<Approvals />} />
+        <Route path="/employee/documents" element={<Documents />} />
       </Route>
+    </Route>
 
-      {/* Protected routes */}
-      <Route element={<ProtectedRoute />}>
-        <Route element={<ProtectedLayout />}>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/timesheets" element={<Timesheets />} />
-          <Route path="/approvals" element={<Approvals />} />
-        </Route>
+    {/* Protected routes */}
+    <Route element={<ProtectedRoute />}>
+      <Route element={<ProtectedLayout />}>
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/timesheets" element={<Timesheets />} />
+        <Route path="/approvals" element={<Approvals />} />
       </Route>
+    </Route>
 
-      {/* Admin/HR only routes */}
-      <Route element={<ProtectedRoute allowedRoles={["admin", "hr"]} />}>
-        <Route element={<ProtectedLayout />}>
-          <Route path="/employees" element={<Employees />} />
-          <Route path="/documents" element={<Documents />} />
-          <Route path="/reports" element={<Reports />} />
-        </Route>
+    {/* Admin/HR only routes */}
+    <Route element={<ProtectedRoute allowedRoles={["admin", "hr"]} />}>
+      <Route element={<ProtectedLayout />}>
+        <Route path="/employees" element={<Employees />} />
+        <Route path="/documents" element={<Documents />} />
+        <Route path="/reports" element={<Reports />} />
       </Route>
+    </Route>
 
-      {/* Admin only routes */}
-      <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
-        <Route element={<ProtectedLayout />}>
-          <Route path="/settings" element={<Settings />} />
-        </Route>
+    {/* Admin only routes */}
+    <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
+      <Route element={<ProtectedLayout />}>
+        <Route path="/settings" element={<Settings />} />
       </Route>
+    </Route>
 
-      {/* Catch-all route */}
-      <Route path="*" element={<NotFound />} />
-    </Routes>
-  );
-};
+    {/* Catch-all route */}
+    <Route path="*" element={<NotFound />} />
+  </Routes>
+);
 
 const App = () => {
   return (

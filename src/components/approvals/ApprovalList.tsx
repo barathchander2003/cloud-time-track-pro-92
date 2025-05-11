@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { 
   Card, 
@@ -45,9 +44,11 @@ interface TimesheetApproval {
   month: number;
   status: string;
   submitted_at: string;
-  first_name?: string;
-  last_name?: string;
-  employee_number?: string;
+  employees?: {
+    first_name?: string;
+    last_name?: string;
+    employee_number?: string;
+  };
 }
 
 const ApprovalList = () => {
@@ -71,43 +72,113 @@ const ApprovalList = () => {
       try {
         setLoading(true);
         
-        // For HR and admin roles, fetch all pending timesheets
-        if (profile?.role === "admin" || profile?.role === "hr") {
-          const { data: timesheets, error } = await supabase
-            .from('timesheets')
-            .select(`
-              id, 
-              employee_id, 
-              year, 
-              month, 
-              status, 
-              submitted_at,
-              employees!timesheet_employee_fkey (
-                first_name,
-                last_name,
-                employee_number
-              )
-            `)
-            .eq('status', 'pending');
+        console.log("Fetching approval requests with user:", session.user.id);
+        console.log("User profile role:", profile?.role);
+        
+        // For demo mode or when using test data
+        if (process.env.NODE_ENV === 'development' && (!session.user.email || session.user.email.includes('example.com'))) {
+          console.log("Using demo data for approvals");
+          const demoApprovals = [
+            {
+              id: "apr-001",
+              employeeName: "Michael Chen",
+              employeeId: "EMP001",
+              type: "timesheet" as const,
+              submissionDate: new Date(),
+              period: "May 2025",
+              status: "pending" as const
+            },
+            {
+              id: "apr-002",
+              employeeName: "Jessica Williams",
+              employeeId: "EMP002",
+              type: "timesheet" as const,
+              submissionDate: new Date(),
+              period: "May 2025", 
+              status: "pending" as const
+            },
+            {
+              id: "apr-003",
+              employeeName: "David Rodriguez",
+              employeeId: "EMP003",
+              type: "timesheet" as const,
+              submissionDate: new Date(),
+              period: "May 2025",
+              status: "pending" as const
+            }
+          ];
           
-          if (error) {
-            console.error("Error fetching approvals:", error);
-            throw new Error(error.message);
-          }
+          const demoHistory = [
+            {
+              id: "apr-004",
+              employeeName: "Sarah Johnson",
+              employeeId: "EMP004",
+              type: "timesheet" as const,
+              submissionDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+              period: "April 2025",
+              status: "approved" as const
+            },
+            {
+              id: "apr-005",
+              employeeName: "Robert Kim",
+              employeeId: "EMP005",
+              type: "timesheet" as const,
+              submissionDate: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
+              period: "April 2025",
+              status: "rejected" as const
+            }
+          ];
           
-          // Transform data to match Approval interface
-          const transformedApprovals: Approval[] = timesheets.map((ts: any) => ({
-            id: ts.id,
-            employeeName: `${ts.employees?.first_name || 'Unknown'} ${ts.employees?.last_name || 'User'}`,
-            employeeId: ts.employees?.employee_number || ts.employee_id,
-            type: "timesheet",
-            submissionDate: new Date(ts.submitted_at),
-            period: `${getMonthName(ts.month)} ${ts.year}`,
-            status: ts.status,
-          }));
-          
-          setApprovals(transformedApprovals);
+          setApprovals(demoApprovals);
+          setHistory(demoHistory);
+          setLoading(false);
+          return;
         }
+        
+        // Only fetch if user is admin or HR
+        if (profile?.role !== "admin" && profile?.role !== "hr") {
+          console.log("User is not admin or HR, skipping approval fetching");
+          setLoading(false);
+          return;
+        }
+        
+        // Fetch pending timesheets with employee information
+        const { data: timesheets, error } = await supabase
+          .from('timesheets')
+          .select(`
+            id, 
+            employee_id, 
+            year, 
+            month, 
+            status, 
+            submitted_at,
+            employees (
+              first_name,
+              last_name,
+              employee_number
+            )
+          `)
+          .eq('status', 'pending');
+          
+        if (error) {
+          console.error("Error fetching approvals:", error);
+          throw new Error(error.message);
+        }
+        
+        console.log("Fetched timesheet data:", timesheets);
+        
+        // Transform data to match Approval interface
+        const transformedApprovals: Approval[] = (timesheets || []).map((ts: any) => ({
+          id: ts.id,
+          employeeName: `${ts.employees?.first_name || 'Unknown'} ${ts.employees?.last_name || 'User'}`,
+          employeeId: ts.employees?.employee_number || ts.employee_id,
+          type: "timesheet",
+          submissionDate: new Date(ts.submitted_at),
+          period: `${getMonthName(ts.month)} ${ts.year}`,
+          status: ts.status,
+        }));
+        
+        setApprovals(transformedApprovals);
         
         // Fetch approval history
         const { data: historyData, error: historyError } = await supabase
@@ -119,18 +190,20 @@ const ApprovalList = () => {
             month, 
             status, 
             submitted_at,
-            employees!timesheet_employee_fkey (
+            employees (
               first_name,
               last_name,
               employee_number
             )
           `)
-          .in('status', ['approved', 'rejected']);
+          .in('status', ['approved', 'rejected'])
+          .order('submitted_at', { ascending: false })
+          .limit(10);
           
         if (historyError) {
           console.error("Error fetching approval history:", historyError);
         } else if (historyData) {
-          const transformedHistory: Approval[] = historyData.map((ts: any) => ({
+          const transformedHistory: Approval[] = (historyData || []).map((ts: any) => ({
             id: ts.id,
             employeeName: `${ts.employees?.first_name || 'Unknown'} ${ts.employees?.last_name || 'User'}`,
             employeeId: ts.employees?.employee_number || ts.employee_id,
@@ -142,12 +215,12 @@ const ApprovalList = () => {
           
           setHistory(transformedHistory);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("Failed to fetch approvals:", error);
         toast({
           variant: "destructive",
           title: "Error",
-          description: "Failed to load approval requests",
+          description: "Failed to load approval requests: " + (error.message || "Unknown error"),
         });
       } finally {
         setLoading(false);
@@ -193,7 +266,7 @@ const ApprovalList = () => {
       }
       
       // Create a notification for the employee
-      const { error: notifError } = await supabase
+      await supabase
         .from('notifications')
         .insert({
           user_id: selectedApproval.employeeId,
@@ -201,10 +274,6 @@ const ApprovalList = () => {
           message: `Your timesheet for ${selectedApproval.period} has been ${approvalAction === "approve" ? "approved" : "rejected"}${approvalAction === "reject" ? ": " + comment : ""}`,
           read: false
         });
-        
-      if (notifError) {
-        console.error("Error creating notification:", notifError);
-      }
       
       // Update UI
       setApprovals(prev => prev.filter(a => a.id !== selectedApproval.id));
@@ -228,7 +297,7 @@ const ApprovalList = () => {
 
   const getMonthName = (monthNumber: number): string => {
     const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-    return months[monthNumber - 1];
+    return monthNumber >= 1 && monthNumber <= 12 ? months[monthNumber - 1] : "Unknown";
   };
 
   const getApprovalDetails = (approval: Approval) => {
@@ -294,52 +363,52 @@ const ApprovalList = () => {
                 </div>
               ) : (
                 <>
-                  {approvals.map((approval) => (
-                    <div 
-                      key={approval.id} 
-                      className="border rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-medium">{approval.employeeName}</h3>
-                            <span className="text-xs text-muted-foreground">
-                              ({approval.employeeId})
-                            </span>
-                          </div>
-                          <p className="text-sm">{getApprovalDetails(approval)}</p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Submitted on {formatDate(approval.submissionDate)}
-                          </p>
-                        </div>
-                        <div className="flex flex-col items-end gap-2">
-                          {getStatusBadge(approval.status)}
-                          
-                          {approval.status === "pending" && (
-                            <div className="flex gap-2 mt-2">
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                className="text-red-600 hover:text-red-700 border-red-200 hover:bg-red-50"
-                                onClick={() => handleReject(approval)}
-                              >
-                                Reject
-                              </Button>
-                              <Button 
-                                size="sm" 
-                                className="bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700"
-                                onClick={() => handleApprove(approval)}
-                              >
-                                Approve
-                              </Button>
+                  {approvals.length > 0 ? (
+                    approvals.map((approval) => (
+                      <div 
+                        key={approval.id} 
+                        className="border rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-medium">{approval.employeeName}</h3>
+                              <span className="text-xs text-muted-foreground">
+                                ({approval.employeeId})
+                              </span>
                             </div>
-                          )}
+                            <p className="text-sm">{getApprovalDetails(approval)}</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Submitted on {formatDate(approval.submissionDate)}
+                            </p>
+                          </div>
+                          <div className="flex flex-col items-end gap-2">
+                            {getStatusBadge(approval.status)}
+                            
+                            {approval.status === "pending" && (
+                              <div className="flex gap-2 mt-2">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="text-red-600 hover:text-red-700 border-red-200 hover:bg-red-50"
+                                  onClick={() => handleReject(approval)}
+                                >
+                                  Reject
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  className="bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700"
+                                  onClick={() => handleApprove(approval)}
+                                >
+                                  Approve
+                                </Button>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                  
-                  {approvals.length === 0 && (
+                    ))
+                  ) : (
                     <div className="text-center py-8 bg-gray-50 rounded-lg">
                       <p className="text-muted-foreground">No pending approvals at this time</p>
                     </div>
@@ -356,32 +425,32 @@ const ApprovalList = () => {
                 </div>
               ) : (
                 <>
-                  {history.map((item) => (
-                    <div 
-                      key={item.id} 
-                      className="border rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-medium">{item.employeeName}</h3>
-                            <span className="text-xs text-muted-foreground">
-                              ({item.employeeId})
-                            </span>
+                  {history.length > 0 ? (
+                    history.map((item) => (
+                      <div 
+                        key={item.id} 
+                        className="border rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-medium">{item.employeeName}</h3>
+                              <span className="text-xs text-muted-foreground">
+                                ({item.employeeId})
+                              </span>
+                            </div>
+                            <p className="text-sm">{getApprovalDetails(item)}</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Submitted on {formatDate(item.submissionDate)}
+                            </p>
                           </div>
-                          <p className="text-sm">{getApprovalDetails(item)}</p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Submitted on {formatDate(item.submissionDate)}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {getStatusBadge(item.status)}
+                          <div className="flex items-center gap-2">
+                            {getStatusBadge(item.status)}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                  
-                  {history.length === 0 && (
+                    ))
+                  ) : (
                     <div className="text-center py-8 bg-gray-50 rounded-lg">
                       <p className="text-muted-foreground">No approval history found</p>
                     </div>
