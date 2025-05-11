@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Navigate, Link, useNavigate } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -118,6 +117,9 @@ const Login = () => {
           title: "Login successful",
           description: "Welcome to TimeTrack HR system.",
         });
+
+        // Navigate to dashboard after successful login
+        navigate("/dashboard");
       }
     } catch (error: any) {
       console.error("Login error:", error);

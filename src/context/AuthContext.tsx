@@ -50,6 +50,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const fetchProfile = async (userId: string) => {
     try {
       console.log("Fetching profile for user:", userId);
+      
+      // Get user metadata from auth
+      const { data: userData } = await supabase.auth.getUser();
+      
+      if (!userData?.user) {
+        console.error("No user data found when fetching profile");
+        return null;
+      }
+      
+      // Try to get the profile from the profiles table
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
@@ -59,11 +69,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (error) {
         console.error("Error fetching profile:", error);
         
-        // Get user metadata from auth
-        const { data: userData } = await supabase.auth.getUser();
-        const userMetadata = userData?.user?.user_metadata;
+        // Get user metadata
+        const userMetadata = userData.user.user_metadata;
         
-        // Create a profile for this user with data from user_metadata
+        // Create a profile with metadata if it doesn't exist
         const userRole = userMetadata?.role || 'employee';
         const firstName = userMetadata?.first_name;
         const lastName = userMetadata?.last_name;
@@ -98,7 +107,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       return data as UserProfile;
     } catch (error) {
       console.error("Error in fetchProfile:", error);
-      return { id: userId, role: "employee" };
+      return null;
     }
   };
 
@@ -128,6 +137,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             setTimeout(async () => {
               const userProfile = await fetchProfile(currentSession.user.id);
               setProfile(userProfile);
+              setIsLoading(false);
             }, 0);
           }
         } 
@@ -135,6 +145,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setSession(null);
           setUser(null);
           setProfile(null);
+          setIsLoading(false);
         } 
         else if (event === 'USER_UPDATED') {
           // Refresh user data when updated
@@ -142,6 +153,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             setTimeout(async () => {
               const userProfile = await fetchProfile(currentSession.user.id);
               setProfile(userProfile);
+              setIsLoading(false);
             }, 0);
           }
         }
@@ -185,11 +197,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       subscription.unsubscribe();
     };
-  }, [navigate]);
+  }, []);
 
   const signIn = async (email: string, password: string) => {
     try {
       console.log("Signing in with email:", email);
+      setIsLoading(true);
       
       // Direct sign in, no email verification check
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -209,16 +222,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         // Fetch and set the user profile
         const userProfile = await fetchProfile(data.session.user.id);
         setProfile(userProfile);
-        
-        // Navigate happens in the component after successful login
       }
       
+      setIsLoading(false);
       return { 
         data: data?.session,
         error 
       };
     } catch (error: any) {
       console.error("Error in signIn function:", error);
+      setIsLoading(false);
       return { 
         data: null, 
         error: new AuthError(error.message || "An unknown error occurred")
@@ -228,8 +241,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     try {
+      setIsLoading(true);
       await supabase.auth.signOut();
       navigate("/login");
+      setIsLoading(false);
     } catch (error) {
       console.error("Error signing out:", error);
       toast({
@@ -237,6 +252,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         title: "Error signing out",
         description: "Please try again",
       });
+      setIsLoading(false);
     }
   };
 

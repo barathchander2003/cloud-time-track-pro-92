@@ -24,12 +24,18 @@ import EmployeeDashboard from "./pages/EmployeeDashboard";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { LoadingSpinner } from "./components/ui/loading-spinner";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 // Protected route component that checks authentication
 interface ProtectedRouteProps {
   allowedRoles?: string[];
-  element?: React.ReactNode;
   children?: React.ReactNode;
 }
 
@@ -51,7 +57,7 @@ const ProtectedRoute = ({ allowedRoles, children }: ProtectedRouteProps) => {
     return <Navigate to="/dashboard" replace />;
   }
 
-  return children ? <>{children}</> : <Outlet />;
+  return <>{children || <Outlet />}</>;
 };
 
 // Layout wrapper for protected routes
